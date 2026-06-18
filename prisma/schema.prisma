@@ -12,8 +12,21 @@ datasource db {
   provider = "postgresql"
 }
 
+model Movie {
+  id              String @id @default(ulid())
+  title           String
+  description     String?
+  price           Decimal @db.Decimal(10, 2) // maximum total of 10 digits (incl. decimals), and 2 decimal digits, e.g. 19.99
+  releaseDate     Int // Only year
+  imageUrl        String?
+  stock           Int @default(50)
+  runtime         Int? // store runtime as minutes, format to h:mm when rendering in UI
 
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
 
+// --------------------------------------------------------- Better Auth models
 model User {
   id            String    @id
   name          String
