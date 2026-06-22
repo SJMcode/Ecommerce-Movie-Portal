@@ -12,6 +12,17 @@ datasource db {
   provider = "postgresql"
 }
 
+/*
+For an overview of all table relationships check out DATABASE_RELATIONS_README.md
+in the project root. 
+
+It may be a good idea to update that readme (simply using agent AI)
+file with any changes we make to this schema file (primarily if we add more models/tables)
+so we have a reference to the relationships.
+*/
+
+// --------------------------------------------------------- 1:n Tables
+
 model Movie {
   id              String @id @default(ulid())
   title           String
@@ -22,9 +33,150 @@ model Movie {
   stock           Int @default(50)
   runtime         Int? // store runtime as minutes, format to h:mm when rendering in UI
 
+  genres          MovieGenre[]
+  cast            MovieCast[]
+  directors       MovieDirector[]
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model Genre {
+  id              String @id @default(ulid())
+  name            String @unique
+
+  movies          MovieGenre[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Person {
+  id              String @id @default(ulid())
+  name            String @unique
+  biography       String?
+  imageUrl        String?
+  actedIn         MovieCast[]
+  directed        MovieDirector[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([name])
+}
+
+// --------------------------------------------------------- n:n tables / JUNCTION TABLES
+
+// Movie ID <-> MovieGenre <-> Genre ID
+model MovieGenre {
+  movieId         String
+  genreId         String
+  movie           Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre           Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+
+  @@id([movieId, genreId])
+  @@index([genreId])
+}
+
+// Movie ID <-> MovieCast <-> Person ID
+model MovieCast {
+  id              String @id @default(ulid())
+  movieId         String
+  personId        String
+  // characterName   String? // Optional, in case we want to add the actor's character in movie
+  
+  movie           Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  person          Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([movieId, personId])
+  @@index([personId])
+}
+
+// Movie ID <-> MovieDirector <-> Person ID
+model MovieDirector {
+  movieId         String
+  personId        String
+  movie           Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  person          Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+
+  @@id([movieId, personId])
+  @@index([personId])
+}
+
+// --------------------------------------------------------- Order models/enum
+enum OrderStatus {
+  pending
+  paid
+  cancelled
+  completed
+}
+
+model Order {
+  id              String @id @default(ulid())
+  userId          String
+  user            User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  totalAmount     Decimal @db.Decimal(10, 2)
+  status          OrderStatus @default(pending)
+  orderDate       DateTime @default(now())
+  items           OrderItem[]     //individual movies
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id              String @id @default(ulid())
+  orderId         String
+  movieId         String
+  quantity        Int
+  unitPriceAtPurchase Decimal @db.Decimal(10, 2)
+
+  order           Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  movie           Movie @relation(fields: [movieId], references: [id], onDelete: Restrict)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orderId, movieId])
+  @@index([orderId])
+  @@index([movieId])
+}
+
+// --------------------------------------------------------- Cart models
+model Cart {
+  id              String @id @default(ulid())
+  userId          String @unique // One active cart per user
+
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items           CartItem[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CartItem {
+  id              String @id @default(ulid())
+  cartId          String
+  movieId         String
+  quantity        Int @default(1)
+  cart            Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  movie           Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([cartId, movieId]) // prevents duplicate movie entries in same cart
+  @@index([cartId])
+  @@index([movieId])
+}
+
 
 // --------------------------------------------------------- Better Auth models
 model User {
@@ -41,6 +193,8 @@ model User {
   banExpires    DateTime?
   sessions      Session[]
   accounts      Account[]
+  orders        Order[]
+  cart          Cart?   // No [] since User can only have 1 cart active, and ? in case no cart is active 
 
   @@unique([email])
   @@map("user")
