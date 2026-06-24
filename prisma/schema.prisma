@@ -33,6 +33,8 @@ model Movie {
   stock           Int @default(50)
   runtime         Int? // store runtime as minutes, format to h:mm when rendering in UI
 
+  authorId String?
+  author User? @relation(fields:[authorId], references:[id], onDelete: SetNull)
   genres          MovieGenre[]
   cast            MovieCast[]
   directors       MovieDirector[]
@@ -198,6 +200,7 @@ model User {
   orders        Order[]
   cart          Cart?   // No [] since User can only have 1 cart active, and ? in case no cart is active 
 
+  movies Movie[]
   @@unique([email])
   @@map("user")
 }
