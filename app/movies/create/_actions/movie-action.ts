@@ -6,9 +6,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import z from "zod";
 
-const currentYear = new Date().getFullYear();
-const firstMovieYear = 1888;
-
 type InputAsStrings = {
   title: string;
   description: string;
@@ -17,8 +14,19 @@ type InputAsStrings = {
   imageUrl: string;
   stock: string;
   runtime: string;
+  genres: string[];
 };
 
+type CreateMovieResult =
+  | { ok: true; movie: { id: string } }
+  | { ok: false; error: string };
+
+const currentYear = new Date().getFullYear();
+const firstMovieYear = 1888;
+
+
+// Look into using this for numbers: z.coerce.number<number>()
+ 
 const createMovieSchema = z.object({
   title: z
     .string()
@@ -57,16 +65,12 @@ const createMovieSchema = z.object({
       (v) => !isNaN(v) && v >= 0,
       "Runtime must be a number and cannot be a negative value",
     ),
+  genres: z.array(z.string()).min(1, "Select at least one genre"),
 });
-
-type CreateMovieResult =
-  | { ok: true; movie: { id: string } }
-  | { ok: false; error: string };
 
 export async function createMovie(
   values: InputAsStrings,
 ): Promise<CreateMovieResult> {
-
   // ------------------UNCOMMENT TO ENABLE BETTER AUTH
   // const session = await auth.api.getSession({
   //     headers: await headers(),
@@ -100,6 +104,16 @@ export async function createMovie(
       imageUrl: data.imageUrl,
       stock: data.stock,
       runtime: data.runtime,
+      genres: {
+        createMany: {
+          data: data.genres.map((genreId) => ({
+            genreId: genreId,
+          })),
+        },
+      },
+    },
+    include: {
+      genres: true,
     },
   });
 

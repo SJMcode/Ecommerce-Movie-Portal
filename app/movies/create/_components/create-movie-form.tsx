@@ -13,6 +13,21 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 import { createMovie } from "../_actions/movie-action";
+import { GenreOption, getGenres } from "../_actions/genre-actions";
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
+import { useEffect, useMemo, useState } from "react";
+import { AddGenreDialog } from "./add-genre-dialog-form";
 
 // ---------------------- To be added later:
 // Look into multiple select component for genres: https://shadcn-multi-select-component.vercel.app/
@@ -39,7 +54,7 @@ const formSchema = z.object({
   price: z
     .string()
     .min(1, "Price is required")
-    .transform(Number) // DOUBLE CHECK THIS FOR ALL NUMBER FIELDS; DOES IT MESS UP THE STATE FIELD?
+    .transform(Number)
     .refine((v) => !isNaN(v), "Price must be a number")
     .refine((v) => v > 0, "Price must be greater than 0"),
   releaseDate: z
@@ -66,10 +81,33 @@ const formSchema = z.object({
       (v) => !isNaN(v) && v >= 0,
       "Runtime must be a number and cannot be a negative value",
     ),
+  genres: z.array(z.string()).min(1, "Select at least one genre"),
+  // cast: z.string(),
+  // directors: z.string(),
 });
 
 function CreateMovieForm() {
+  const [genres, setGenres] = useState<GenreOption[]>([]);
+  const [userInput, setUserInput] = useState("");
+  const anchor = useComboboxAnchor();
   const router = useRouter();
+  const genreLabelMap = useMemo(
+    () =>
+      Object.fromEntries(genres.map((g) => [g.id, g.name])) as Record<
+        string,
+        string
+      >,
+    [genres],
+  );
+
+  useEffect(() => {
+    async function loadGenres() {
+      const genres = await getGenres();
+      setGenres(genres);
+    }
+
+    loadGenres();
+  }, []);
 
   const form = useForm({
     defaultValues: {
@@ -80,6 +118,9 @@ function CreateMovieForm() {
       imageUrl: "",
       stock: "", // default in prisma schema is set to 50
       runtime: "",
+      genres: [] as string[],
+      // cast: "",
+      // directors: "",
     },
     validators: {
       onSubmit: formSchema,
@@ -88,8 +129,7 @@ function CreateMovieForm() {
       const newMovie = await createMovie(value);
 
       if (newMovie.ok === false) {
-        toast.error(newMovie.error);
-        return;
+        return toast.error(newMovie.error);
       }
 
       toast.success("Successfully added movie!");
@@ -109,7 +149,7 @@ function CreateMovieForm() {
         <form.Field name="title">
           {(field) => {
             const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -131,7 +171,7 @@ function CreateMovieForm() {
         <form.Field name="description">
           {(field) => {
             const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -153,7 +193,7 @@ function CreateMovieForm() {
         <form.Field name="price">
           {(field) => {
             const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -176,7 +216,7 @@ function CreateMovieForm() {
         <form.Field name="releaseDate">
           {(field) => {
             const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -199,7 +239,7 @@ function CreateMovieForm() {
         <form.Field name="imageUrl">
           {(field) => {
             const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -221,7 +261,7 @@ function CreateMovieForm() {
         <form.Field name="stock">
           {(field) => {
             const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -244,7 +284,7 @@ function CreateMovieForm() {
         <form.Field name="runtime">
           {(field) => {
             const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -258,6 +298,78 @@ function CreateMovieForm() {
                   onBlur={field.handleBlur}
                   aria-invalid={isInvalid}
                 />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        </form.Field>
+
+        <form.Field name="genres">
+          {(field) => {
+            const isInvalid =
+              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+
+            return (
+              <Field data-invalid={isInvalid}>
+                <FieldLabel htmlFor={field.name}>Genre</FieldLabel>
+                <div className="flex gap-6">
+                  <Combobox
+                    multiple
+                    autoHighlight
+                    items={genres.map((g) => g.id)}
+                    value={field.state.value}
+                    onValueChange={(values) => field.handleChange(values)}
+                    inputValue={userInput}
+                    onInputValueChange={setUserInput}
+                    filter={(itemId, userSearch) =>
+                      (genreLabelMap[itemId] ?? "")
+                        .toLowerCase()
+                        .includes(userSearch.toLowerCase())
+                    }
+                  >
+                    <ComboboxChips ref={anchor} className="w-full max-w-lg">
+                      <ComboboxValue>
+                        {(values) => (
+                          <>
+                            {values.map((id: string) => (
+                              <ComboboxChip key={id}>
+                                {genreLabelMap[id] ?? id}
+                              </ComboboxChip>
+                            ))}
+                            <ComboboxChipsInput
+                              placeholder="Search genres..."
+                              onBlur={field.handleBlur}
+                              aria-invalid={isInvalid}
+                            />
+                          </>
+                        )}
+                      </ComboboxValue>
+                    </ComboboxChips>
+                    <ComboboxContent anchor={anchor}>
+                      <ComboboxEmpty>No items found.</ComboboxEmpty>
+                      <ComboboxList>
+                        {(item) => (
+                          <ComboboxItem key={item} value={item}>
+                            {genreLabelMap[item] ?? item}
+                          </ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                  {/* AddGenreButton also contains the form for creating genre! */}
+                  <AddGenreDialog
+                    onCreated={async (createdGenreId) => {
+                      const latestGenres = await getGenres();
+                      setGenres(latestGenres);
+
+                      field.handleChange(
+                        Array.from(
+                          new Set([...field.state.value, createdGenreId]),
+                        ),
+                      );
+                    }}
+                  />
+                </div>
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>
             );
