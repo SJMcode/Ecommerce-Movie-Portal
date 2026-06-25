@@ -303,48 +303,6 @@ function EmptyState({
   );
 }
 
-// top nav
-// simple landing navigation
-function DefaultNav() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur">
-      <nav className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-        <Link
-          href="/"
-          className="flex items-center gap-3 text-base font-bold tracking-tight text-white sm:text-lg"
-        >
-          {/* popcorn icon */}
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xl ring-1 ring-red-400/40">
-            🍿
-          </span>
-
-          <span className="leading-tight">
-            LONELY RIDER <span className="text-red-400">TEAM</span>
-          </span>
-        </Link>
-
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-zinc-300 sm:justify-end">
-          <Link href="/movies" className="transition hover:text-white">
-            Movies
-          </Link>
-
-          <Link href="/cart" className="transition hover:text-white">
-            Cart
-          </Link>
-
-          <Link href="/dashboard" className="transition hover:text-white">
-            Dashboard
-          </Link>
-
-          <Link href="/sign-in" className="transition hover:text-white">
-            Sign in
-          </Link>
-        </div>
-      </nav>
-    </header>
-  );
-}
-
 // one horizontal movie section
 // phone/tablet/laptop friendly with native horizontal scroll
 function MovieCarouselSection({ section }: { section: MovieSection }) {
@@ -492,8 +450,6 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
-      <DefaultNav />
-
       <section
         className="relative flex min-h-[70vh] items-center justify-center overflow-hidden bg-cover bg-center px-4 py-20 text-center sm:min-h-[75vh] sm:px-6 sm:py-24 lg:px-8"
         style={{
