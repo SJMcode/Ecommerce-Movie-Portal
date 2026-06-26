@@ -1,15 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { useForm } from "@tanstack/react-form";
+
 import z from "zod";
 
 
-// ------------------------------ GET GENRE FUNCTION
-export type GenreOption = {
-  id: string;
-  name: string;
-};
+// ------------------------------ GET GENRE FUNCTION 
 
 export async function getGenres() {
   const genres = prisma.genre.findMany({
@@ -20,6 +16,18 @@ export async function getGenres() {
     orderBy: { name: "asc" },
   });
   return genres;
+}
+
+// ------------------------------ DELETE GENRE FUNCTION
+
+export async function deleteGenreById(genreId: string) {
+  const deleted = await prisma.genre.delete({
+    where: {
+      id: genreId
+    }
+  })
+
+  return deleted;
 }
 
 // ------------------------------ CREATE GENRE FUNCTION

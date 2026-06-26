@@ -4,14 +4,13 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 export default async function CreateMoviePage() {
-    // ------------------ UNCOMMENT TO ENABLE BETTER AUTH
-    // const session = await auth.api.getSession({
-    //     headers: await headers(),
-    // })
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    })
 
-    // if (!session) {
-    //     redirect("/sign-in")
-    // }
+    if (!session) {
+        redirect("/sign-in")
+    }
 
     return (
         <div className="mx-auto max-w-prose space-y-4 p-4">

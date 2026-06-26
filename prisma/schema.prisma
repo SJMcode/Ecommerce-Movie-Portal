@@ -59,9 +59,10 @@ model Genre {
 
 model Person {
   id              String @id @default(ulid())
-  name            String @unique
+  name            String
   biography       String?
   imageUrl        String?
+  imdbId          String? @unique
   actedIn         MovieCast[]
   directed        MovieDirector[]
   createdAt       DateTime @default(now())

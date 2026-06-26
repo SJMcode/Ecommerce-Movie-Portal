@@ -1,9 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import z from "zod";
 
 type InputAsStrings = {
@@ -15,6 +12,8 @@ type InputAsStrings = {
   stock: string;
   runtime: string;
   genres: string[];
+  directors: string[];
+  cast: string[];
 };
 
 type CreateMovieResult =
@@ -25,7 +24,8 @@ const currentYear = new Date().getFullYear();
 const firstMovieYear = 1888;
 
 
-// Look into using this for numbers: z.coerce.number<number>()
+// Look into using this for numbers when time: 
+// ----> z.coerce.number<number>()
  
 const createMovieSchema = z.object({
   title: z
@@ -34,7 +34,7 @@ const createMovieSchema = z.object({
     .max(40, "Title cannot be longer than 40 characters"),
   description: z
     .string()
-    .max(250, "Content cannot be longer than 250 characters"),
+    .max(500, "Content cannot be longer than 250 characters"),
   price: z
     .string()
     .min(1, "Price is required")
@@ -66,19 +66,13 @@ const createMovieSchema = z.object({
       "Runtime must be a number and cannot be a negative value",
     ),
   genres: z.array(z.string()).min(1, "Select at least one genre"),
+  directors: z.array(z.string()).min(1, "Select at least one director"),
+  cast: z.array(z.string())
 });
 
 export async function createMovie(
   values: InputAsStrings,
 ): Promise<CreateMovieResult> {
-  // ------------------UNCOMMENT TO ENABLE BETTER AUTH
-  // const session = await auth.api.getSession({
-  //     headers: await headers(),
-  // });
-
-  // if (!session) {
-  //     redirect("/sign-in")
-  // }
 
   const data = createMovieSchema.parse(values);
 
@@ -111,9 +105,21 @@ export async function createMovie(
           })),
         },
       },
-    },
-    include: {
-      genres: true,
+      directors: {
+        createMany: {
+          data: data.directors.map((personId) => ({
+            personId: personId
+          }))
+        }
+      },
+      cast: {
+        createMany: {
+          data: data.cast.map((personId) => ({
+            personId: personId
+          }))
+        }
+      }
+
     },
   });
 

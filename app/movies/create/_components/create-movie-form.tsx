@@ -12,8 +12,8 @@ import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
-import { createMovie } from "../_actions/movie-action";
-import { GenreOption, getGenres } from "../_actions/genre-actions";
+import { createMovie } from "../_actions/create-movie-action";
+import { deleteGenreById, getGenres } from "../_actions/genre-actions";
 import {
   Combobox,
   ComboboxChip,
@@ -27,18 +27,12 @@ import {
   useComboboxAnchor,
 } from "@/components/ui/combobox";
 import { useEffect, useMemo, useState } from "react";
-import { AddGenreDialog } from "./add-genre-dialog-form";
+import { CreateGenreDialog } from "./create-genre-dialog-form";
+import { deletePersonById, getPeople } from "../_actions/people-actions";
+import { CreatePersonDialog } from "./create-person-dialog-form";
+import { Trash } from "lucide-react";
 
-// ---------------------- To be added later:
-// Look into multiple select component for genres: https://shadcn-multi-select-component.vercel.app/
-// For adding PEOPLE to movie:
-// - have a field where user can fill in a name and also get
-//   search suggestions from the DB.
-// - Add checkboxes next to the search field for role in movie: Director / Actor
-
-// Both will be validated by ZOD as strings.
-
-// Validation form model/schema
+// ----------------------------------------- ZOD Validation form model/schema
 
 const currentYear = new Date().getFullYear();
 const firstMovieYear = 1888;
@@ -50,7 +44,7 @@ const formSchema = z.object({
     .max(40, "Title cannot be longer than 40 characters"),
   description: z
     .string()
-    .max(5000, "Content cannot be longer than 250 characters"),
+    .max(500, "Content cannot be longer than 250 characters"),
   price: z
     .string()
     .min(1, "Price is required")
@@ -82,24 +76,49 @@ const formSchema = z.object({
       "Runtime must be a number and cannot be a negative value",
     ),
   genres: z.array(z.string()).min(1, "Select at least one genre"),
-  // cast: z.string(),
-  // directors: z.string(),
+  directors: z.array(z.string()).min(1, "Select at least one director"),
+  cast: z.array(z.string()),
 });
 
 function CreateMovieForm() {
-  const [genres, setGenres] = useState<GenreOption[]>([]);
-  const [userInput, setUserInput] = useState("");
-  const anchor = useComboboxAnchor();
+  const genresAnchor = useComboboxAnchor();
+  const directorAnchor = useComboboxAnchor();
+  const castAnchor = useComboboxAnchor();
   const router = useRouter();
-  const genreLabelMap = useMemo(
-    () =>
-      Object.fromEntries(genres.map((g) => [g.id, g.name])) as Record<
-        string,
-        string
-      >,
-    [genres],
-  );
+  const handleReset = () => {
+    const confirm = window.confirm("Are you sure you wish to reset the form?");
+    if (!confirm) {
+      return;
+    }
+    form.reset();
+    setUserInputGenres("");
+    setUserInputDirector("");
+    setUserInputActor("");
+  };
 
+  // ---------------------------------------------------- STATE CONTROL/UPDATES
+
+  // State control for genres search bar.
+  // When new genre is added, search field is re-rendered with updates from db.
+  const [userInputGenres, setUserInputGenres] = useState("");
+  type GenreItem = {
+    id: string;
+    name: string;
+  };
+
+  const [genres, setGenres] = useState<GenreItem[]>([]);
+
+  const genreLabelMap = useMemo(() => {
+    const lookup: Record<string, string> = {};
+
+    genres.forEach((genre) => {
+      lookup[genre.id] = genre.name;
+    });
+
+    return lookup;
+  }, [genres]);
+
+  // useEffect-hook to fetch and set the genres list once, when the parent component (CreateMovieForm) mounts to the DOM
   useEffect(() => {
     async function loadGenres() {
       const genres = await getGenres();
@@ -108,6 +127,42 @@ function CreateMovieForm() {
 
     loadGenres();
   }, []);
+
+  // ------------------------------------------------------------
+
+  // State control for PEOPLE search bar (director/cast search fields are populated from the Person db table)
+
+  const [userInputDirector, setUserInputDirector] = useState("");
+  const [userInputActor, setUserInputActor] = useState("");
+
+  type PeopleItem = {
+    id: string;
+    name: string;
+  };
+
+  const [people, setPeople] = useState<PeopleItem[]>([]);
+
+  // useMemo-hook rebuilds the lookup map whenever the 'people' list is updated
+  const peopleLabelMap = useMemo(() => {
+    const lookup: Record<string, string> = {};
+
+    people.forEach((person) => {
+      lookup[person.id] = person.name;
+    });
+    return lookup;
+  }, [people]); // Tells useMemo to run whenever the 'people' array state changes
+
+  // useEffect-hook to fetch and set the people list once, when the parent component (CreateMovieForm) mounts to the DOM
+  useEffect(() => {
+    async function loadPeople() {
+      const people = await getPeople();
+      setPeople(people);
+    }
+
+    loadPeople();
+  }, []);
+
+  // -------------------------------------------------------------
 
   const form = useForm({
     defaultValues: {
@@ -119,8 +174,8 @@ function CreateMovieForm() {
       stock: "", // default in prisma schema is set to 50
       runtime: "",
       genres: [] as string[],
-      // cast: "",
-      // directors: "",
+      directors: [] as string[],
+      cast: [] as string[],
     },
     validators: {
       onSubmit: formSchema,
@@ -149,7 +204,8 @@ function CreateMovieForm() {
         <form.Field name="title">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -171,7 +227,8 @@ function CreateMovieForm() {
         <form.Field name="description">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -193,7 +250,8 @@ function CreateMovieForm() {
         <form.Field name="price">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -216,7 +274,8 @@ function CreateMovieForm() {
         <form.Field name="releaseDate">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -239,7 +298,8 @@ function CreateMovieForm() {
         <form.Field name="imageUrl">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -261,7 +321,8 @@ function CreateMovieForm() {
         <form.Field name="stock">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -284,7 +345,8 @@ function CreateMovieForm() {
         <form.Field name="runtime">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
@@ -307,57 +369,15 @@ function CreateMovieForm() {
         <form.Field name="genres">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) && !field.state.meta.isValid;
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
 
             return (
               <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>Genre</FieldLabel>
-                <div className="flex gap-6">
-                  <Combobox
-                    multiple
-                    autoHighlight
-                    items={genres.map((g) => g.id)}
-                    value={field.state.value}
-                    onValueChange={(values) => field.handleChange(values)}
-                    inputValue={userInput}
-                    onInputValueChange={setUserInput}
-                    filter={(itemId, userSearch) =>
-                      (genreLabelMap[itemId] ?? "")
-                        .toLowerCase()
-                        .includes(userSearch.toLowerCase())
-                    }
-                  >
-                    <ComboboxChips ref={anchor} className="w-full max-w-lg">
-                      <ComboboxValue>
-                        {(values) => (
-                          <>
-                            {values.map((id: string) => (
-                              <ComboboxChip key={id}>
-                                {genreLabelMap[id] ?? id}
-                              </ComboboxChip>
-                            ))}
-                            <ComboboxChipsInput
-                              placeholder="Search genres..."
-                              onBlur={field.handleBlur}
-                              aria-invalid={isInvalid}
-                            />
-                          </>
-                        )}
-                      </ComboboxValue>
-                    </ComboboxChips>
-                    <ComboboxContent anchor={anchor}>
-                      <ComboboxEmpty>No items found.</ComboboxEmpty>
-                      <ComboboxList>
-                        {(item) => (
-                          <ComboboxItem key={item} value={item}>
-                            {genreLabelMap[item] ?? item}
-                          </ComboboxItem>
-                        )}
-                      </ComboboxList>
-                    </ComboboxContent>
-                  </Combobox>
-                  {/* AddGenreButton also contains the form for creating genre! */}
-                  <AddGenreDialog
+                <FieldLabel htmlFor={field.name} className="justify-between">
+                  Genre
+                  {/* AddGenreDialog contains the minimal form for creating genre! */}
+                  <CreateGenreDialog
                     onCreated={async (createdGenreId) => {
                       const latestGenres = await getGenres();
                       setGenres(latestGenres);
@@ -369,7 +389,317 @@ function CreateMovieForm() {
                       );
                     }}
                   />
-                </div>
+                </FieldLabel>
+
+                <Combobox
+                  multiple
+                  autoHighlight
+                  items={genres.map((genre) => genre.id)}
+                  value={field.state.value}
+                  onValueChange={(values) => field.handleChange(values)}
+                  inputValue={userInputGenres}
+                  onInputValueChange={setUserInputGenres}
+                  filter={(itemId, userSearch) =>
+                    (genreLabelMap[itemId] ?? "")
+                      .toLowerCase()
+                      .includes(userSearch.toLowerCase())
+                  }
+                >
+                  <ComboboxChips ref={genresAnchor}>
+                    <ComboboxValue>
+                      {(values) => (
+                        <>
+                          {values.map((id: string) => (
+                            <ComboboxChip key={id}>
+                              {genreLabelMap[id]}
+                            </ComboboxChip>
+                          ))}
+                          <ComboboxChipsInput
+                            placeholder="Search genres..."
+                            onBlur={field.handleBlur}
+                            aria-invalid={isInvalid}
+                          />
+                        </>
+                      )}
+                    </ComboboxValue>
+                  </ComboboxChips>
+                  <ComboboxContent anchor={genresAnchor}>
+                    <ComboboxEmpty>No items found.</ComboboxEmpty>
+                    <ComboboxList>
+                      {(item) => (
+                        <ComboboxItem key={item} value={item}>
+                          <div className="w-full flex justify-between items-center">
+                            {genreLabelMap[item] ?? item}
+                            {
+                              <Button
+                                variant="destructive"
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
+                                  const confirmDelete = window.confirm(
+                                    `Are you sure you wish to delete ${genreLabelMap[item]}? This will also remove it from any connected movies.`,
+                                  );
+                                  if (confirmDelete) {
+                                    const deletedGenre =
+                                      await deleteGenreById(item);
+                                    const updateList = await getGenres();
+                                    setGenres(updateList);
+                                    field.handleChange(
+                                      Array.from(
+                                        new Set(
+                                          field.state.value.filter(
+                                            (id) => id !== item,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                    toast.success(
+                                      `${genreLabelMap[item]} was successfully deleted.`,
+                                    );
+                                    return deletedGenre;
+                                  }
+                                }}
+                              >
+                                <Trash />
+                              </Button>
+                            }
+                          </div>
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        </form.Field>
+
+        <form.Field name="directors">
+          {(field) => {
+            const isInvalid =
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
+
+            return (
+              <Field>
+                <FieldLabel htmlFor={field.name} className="justify-between">
+                  Director
+                  <CreatePersonDialog
+                    onCreated={async (createdPersonId) => {
+                      const latestPeople = await getPeople();
+                      setPeople(latestPeople);
+
+                      field.handleChange(
+                        Array.from(
+                          new Set([...field.state.value, createdPersonId]),
+                        ),
+                      );
+                    }}
+                  />
+                </FieldLabel>
+
+                <Combobox
+                  multiple
+                  autoHighlight
+                  items={people.map((person) => person.id)}
+                  value={field.state.value}
+                  onValueChange={(values) => field.handleChange(values)}
+                  inputValue={userInputDirector}
+                  onInputValueChange={setUserInputDirector}
+                  filter={(itemId, userSearch) =>
+                    (peopleLabelMap[itemId] ?? "")
+                      .toLowerCase()
+                      .includes(userSearch.toLowerCase())
+                  }
+                >
+                  <ComboboxChips ref={directorAnchor}>
+                    <ComboboxValue>
+                      {(values) => (
+                        <>
+                          {values.map((id: string) => (
+                            <ComboboxChip key={id}>
+                              {peopleLabelMap[id] ?? id}
+                            </ComboboxChip>
+                          ))}
+                          <ComboboxChipsInput
+                            placeholder="Search person..."
+                            onBlur={field.handleBlur}
+                            aria-invalid={isInvalid}
+                          />
+                        </>
+                      )}
+                    </ComboboxValue>
+                  </ComboboxChips>
+                  <ComboboxContent anchor={directorAnchor}>
+                    <ComboboxEmpty>No items found.</ComboboxEmpty>
+                    <ComboboxList>
+                      {(item) => (
+                        <ComboboxItem key={item} value={item}>
+                          <div className="w-full flex justify-between items-center">
+                            {peopleLabelMap[item] ?? item}
+                            {
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={async (e) => {
+                                  e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
+                                  const confirmDelete = window.confirm(
+                                    `Are you sure you wish to delete ${peopleLabelMap[item]}? This will also remove them from any connected movies.`,
+                                  );
+                                  if (confirmDelete) {
+                                    const deletedPerson =
+                                      await deletePersonById(item);
+                                    const updateList = await getPeople();
+                                    setPeople(updateList);
+                                    field.handleChange(
+                                      Array.from(
+                                        new Set(
+                                          field.state.value.filter(
+                                            (id) => id !== item,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                    form.setFieldValue(
+                                      "cast",
+                                      form.state.values.cast.filter(
+                                        (id) => id !== item,
+                                      ),
+                                    );
+                                    toast.success(
+                                      `${peopleLabelMap[item]} was successfully deleted.`,
+                                    );
+                                    return deletedPerson;
+                                  }
+                                }}
+                              >
+                                <Trash />
+                              </Button>
+                            }
+                          </div>
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        </form.Field>
+
+        <form.Field name="cast">
+          {(field) => {
+            const isInvalid =
+              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              !field.state.meta.isValid;
+
+            return (
+              <Field>
+                <FieldLabel htmlFor={field.name} className="justify-between">
+                  Cast
+                  <CreatePersonDialog
+                    onCreated={async (createdPersonId) => {
+                      const latestPeople = await getPeople();
+                      setPeople(latestPeople);
+
+                      field.handleChange(
+                        Array.from(
+                          new Set([...field.state.value, createdPersonId]),
+                        ),
+                      );
+                    }}
+                  />
+                </FieldLabel>
+
+                <Combobox
+                  multiple
+                  autoHighlight
+                  items={people.map((person) => person.id)}
+                  value={field.state.value}
+                  onValueChange={(values) => field.handleChange(values)}
+                  inputValue={userInputActor}
+                  onInputValueChange={setUserInputActor}
+                  filter={(itemId, userSearch) =>
+                    (peopleLabelMap[itemId] ?? "")
+                      .toLowerCase()
+                      .includes(userSearch.toLowerCase())
+                  }
+                >
+                  <ComboboxChips ref={castAnchor}>
+                    <ComboboxValue>
+                      {(values) => (
+                        <>
+                          {values.map((id: string) => (
+                            <ComboboxChip key={id}>
+                              {peopleLabelMap[id] ?? id}
+                            </ComboboxChip>
+                          ))}
+                          <ComboboxChipsInput
+                            placeholder="Search person..."
+                            onBlur={field.handleBlur}
+                            aria-invalid={isInvalid}
+                          />
+                        </>
+                      )}
+                    </ComboboxValue>
+                  </ComboboxChips>
+                  <ComboboxContent anchor={castAnchor}>
+                    <ComboboxEmpty>No items found.</ComboboxEmpty>
+                    <ComboboxList>
+                      {(item) => (
+                        <ComboboxItem key={item} value={item}>
+                          <div className="w-full flex justify-between items-center">
+                            {peopleLabelMap[item] ?? item}
+                            {
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={async (e) => {
+                                  e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
+                                  const confirmDelete = window.confirm(
+                                    `Are you sure you wish to delete ${peopleLabelMap[item]}? This will also remove them from any connected movies.`,
+                                  );
+                                  if (confirmDelete) {
+                                    const deletedPerson =
+                                      await deletePersonById(item);
+                                    const updateList = await getPeople();
+                                    setPeople(updateList);
+                                    field.handleChange(
+                                      Array.from(
+                                        new Set(
+                                          field.state.value.filter(
+                                            (id) => id !== item,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                    form.setFieldValue(
+                                      "directors",
+                                      form.state.values.directors.filter(
+                                        (id) => id !== item,
+                                      ),
+                                    );
+                                    toast.success(
+                                      `${peopleLabelMap[item]} was successfully deleted.`,
+                                    );
+                                    return deletedPerson;
+                                  }
+                                }}
+                              >
+                                <Trash />
+                              </Button>
+                            }
+                          </div>
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>
             );
@@ -377,7 +707,20 @@ function CreateMovieForm() {
         </form.Field>
 
         <Field orientation="horizontal">
-          <Button type="submit">Create Movie</Button>
+          <div className="flex justify-center gap-4 w-full sm:grid sm:grid-cols-3 sm:items-center">
+            <div className="hidden sm:block" />
+            <Button type="submit" className="sm:justify-self-center">
+              Create Movie
+            </Button>
+            <Button
+              type="reset"
+              variant="destructive"
+              className="sm:justify-self-end"
+              onClick={handleReset}
+            >
+              Reset form
+            </Button>
+          </div>
         </Field>
       </FieldGroup>
     </form>

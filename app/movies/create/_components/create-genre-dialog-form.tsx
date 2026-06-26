@@ -5,13 +5,13 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogPortal,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Field, FieldGroup } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "@tanstack/react-form";
@@ -19,10 +19,9 @@ import { Plus } from "lucide-react";
 import z from "zod";
 import { createGenre } from "../_actions/genre-actions";
 import { toast } from "sonner";
-import router from "next/router";
 import { useState } from "react";
 
-type AddGenreDialogProps = {
+type CreateGenreDialogProps = {
   onCreated?: (createGenreId: string) => Promise<void> | void;
 }
 
@@ -33,7 +32,7 @@ const formSchema = z.object({
     .max(50, "Genre name cannot be longer than 50 characters"),
 });
 
-function AddGenreDialog({ onCreated }: AddGenreDialogProps) {
+function CreateGenreDialog({ onCreated }: CreateGenreDialogProps) {
   const [open, setOpen] = useState(false);
   const form = useForm({
     defaultValues: {
@@ -56,15 +55,15 @@ function AddGenreDialog({ onCreated }: AddGenreDialogProps) {
   });
 
   return (
-    // Check DialogPortal ; wrap dialogcontent ?
+    
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline">
-          Create new genre
+        <Button type="button" variant="secondary" size={"sm"}>
+          New genre
           <Plus />
         </Button>
       </DialogTrigger>
-
+      <DialogPortal>
       <DialogContent className="sm:max-w-sm">
         <form
           method="POST"
@@ -102,8 +101,9 @@ function AddGenreDialog({ onCreated }: AddGenreDialogProps) {
           </DialogFooter>
         </form>
       </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 }
 
-export { AddGenreDialog };
+export { CreateGenreDialog };
