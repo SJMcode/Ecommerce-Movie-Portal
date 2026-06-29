@@ -129,3 +129,50 @@
     @apply font-sans;
   }
 }
+
+
+
+/* slow movie carousel */
+/* used on landing page movie rows */
+.movie-carousel {
+  overflow: hidden;
+}
+
+/* black curtain fade on both sides */
+.movie-carousel-mask {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+}
+
+/* slow endless movement */
+.movie-carousel-track {
+  width: max-content;
+  animation: movie-carousel-scroll 55s linear infinite;
+}
+
+/* pause when mouse is over carousel */
+.movie-carousel:hover .movie-carousel-track {
+  animation-play-state: paused;
+}
+
+@keyframes movie-carousel-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}

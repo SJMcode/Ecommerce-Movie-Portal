@@ -304,10 +304,15 @@ function EmptyState({
 }
 
 // one horizontal movie section
-// phone/tablet/laptop friendly with native horizontal scroll
+// landing page carousel with slow movie movement
+// hover pauses movement so user can click safely
 function MovieCarouselSection({ section }: { section: MovieSection }) {
+  // duplicate movies so CSS animation can loop
+  // first half and second half are the same row
+  const carouselMovies = [...section.movies, ...section.movies];
+
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 overflow-hidden">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="max-w-3xl">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -327,95 +332,98 @@ function MovieCarouselSection({ section }: { section: MovieSection }) {
         </Link>
       </div>
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-        {section.movies.length === 0 ? (
-          // nothing from DB to show in this row
-          <EmptyState
-            title="No movies here yet."
-            description="Movies added from the admin/database will appear here."
-          />
-        ) : (
-          <div className="flex snap-x gap-4 sm:gap-5">
-            {section.movies.map((movie) => {
-              // real DB movies go to /movies/[id]
-              const movieHref = movie.id ? `/movies/${movie.id}` : "/movies";
+      {section.movies.length === 0 ? (
+        // nothing from DB to show in this row
+        <EmptyState
+          title="No movies here yet."
+          description="Movies added from the admin/database will appear here."
+        />
+      ) : (
+        <div className="movie-carousel relative py-4">
+          {/* black curtain fade on left and right side */}
+          <div className="movie-carousel-mask">
+            <div className="movie-carousel-track flex gap-5 py-2">
+              {carouselMovies.map((movie, index) => {
+                // real DB movies go to /movies/[id]
+                const movieHref = movie.id ? `/movies/${movie.id}` : "/movies";
 
-              // cart needs DB movie id
-              const canAddToCart = Boolean(movie.id);
+                // cart needs DB movie id
+                const canAddToCart = Boolean(movie.id);
 
-              return (
-                <article
-                  key={`${section.title}-${movie.title}`}
-                  className="min-w-[78vw] snap-start rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition hover:-translate-y-1 hover:border-red-500/60 sm:min-w-65 sm:p-5 md:min-w-62 lg:min-w-67"
-                >
-                  <Link href={movieHref} className="block">
-                    <div
-                      className="mb-4 flex aspect-2/3 items-center justify-center rounded-xl bg-cover bg-center text-center"
-                      // movie image
-                      // if DB has imageUrl, show image
-                      // if not, show dark card with title
-                      style={{
-                        backgroundImage: movie.imageUrl
-                          ? `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.65)), url(${movie.imageUrl})`
-                          : "linear-gradient(to bottom right, #27272a, #09090b)",
-                      }}
-                    >
-                      {!movie.imageUrl && (
-                        <span className="px-3 text-sm font-semibold text-zinc-300">
-                          {movie.title}
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className="line-clamp-2 text-base font-semibold">
-                      {movie.title}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {movie.director ?? "Director TBA"}
-                    </p>
-
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {movie.genre ?? "Genre TBA"}
-                    </p>
-
-                    <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
-                      <span>
-                        {movie.year}
-                        {movie.runtime ? ` · ${movie.runtime} min` : ""}
-                      </span>
-
-                      <span className="font-semibold text-red-400">
-                        {movie.price} kr
-                      </span>
-                    </div>
-                  </Link>
-
-                  {canAddToCart ? (
-                    // cart button
-                    // hidden input sends movie id to server action
-                    <form action={addToCart} className="mt-4">
-                      <input type="hidden" name="movieId" value={movie.id} />
-
-                      <button
-                        type="submit"
-                        className="w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+                return (
+                  <article
+                    key={`${section.title}-${movie.id ?? movie.title}-${index}`}
+                    className="w-[268px] shrink-0 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition hover:-translate-y-1 hover:border-red-500/60 hover:bg-zinc-800/70 sm:p-5"
+                  >
+                    <Link href={movieHref} className="block">
+                      <div
+                        className="mb-4 flex aspect-2/3 items-center justify-center rounded-xl bg-cover bg-center text-center"
+                        // movie image
+                        // if DB has imageUrl, show image
+                        // if not, show dark card with title
+                        style={{
+                          backgroundImage: movie.imageUrl
+                            ? `url(${movie.imageUrl})`
+                            : "linear-gradient(to bottom right, #27272a, #09090b)",
+                        }}
                       >
-                        Add to cart
-                      </button>
-                    </form>
-                  ) : (
-                    // nothing real to add
-                    <div className="mt-4 rounded-full border border-zinc-800 px-4 py-2 text-center text-sm text-zinc-500">
-                      No cart item yet.
-                    </div>
-                  )}
-                </article>
-              );
-            })}
+                        {!movie.imageUrl && (
+                          <span className="px-3 text-sm font-semibold text-zinc-300">
+                            {movie.title}
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="line-clamp-2 text-base font-semibold">
+                        {movie.title}
+                      </h3>
+
+                      <p className="mt-1 text-sm text-zinc-400">
+                        {movie.director ?? "Director TBA"}
+                      </p>
+
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {movie.genre ?? "Genre TBA"}
+                      </p>
+
+                      <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+                        <span>
+                          {movie.year}
+                          {movie.runtime ? ` · ${movie.runtime} min` : ""}
+                        </span>
+
+                        <span className="font-semibold text-red-400">
+                          {movie.price} kr
+                        </span>
+                      </div>
+                    </Link>
+
+                    {canAddToCart ? (
+                      // cart button
+                      // hidden input sends movie id to server action
+                      <form action={addToCart} className="mt-4">
+                        <input type="hidden" name="movieId" value={movie.id} />
+
+                        <button
+                          type="submit"
+                          className="w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+                        >
+                          Add to cart
+                        </button>
+                      </form>
+                    ) : (
+                      // nothing real to add
+                      <div className="mt-4 rounded-full border border-zinc-800 px-4 py-2 text-center text-sm text-zinc-500">
+                        No cart item yet.
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }

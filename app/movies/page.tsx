@@ -71,15 +71,15 @@ function MovieCard({ movie }: { movie: MovieCardData }) {
       className="group rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition hover:-translate-y-1 hover:border-red-500/60"
     >
       <div
-        className="flex aspect-2/3 items-center justify-center rounded-xl bg-cover bg-center text-center"
+className="flex aspect-[2/3] items-center justify-center rounded-xl bg-cover bg-center text-center"
         // movie image
         // if DB has imageUrl, show it
         // if not, show dark card with title
-        style={{
-          backgroundImage: movie.imageUrl
-            ? `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.65)), url(${movie.imageUrl})`
-            : "linear-gradient(to bottom right, #27272a, #09090b)",
-        }}
+style={{
+  backgroundImage: movie.imageUrl
+    ? `url(${movie.imageUrl})`
+    : "linear-gradient(to bottom right, #27272a, #09090b)",
+}}
       >
         {!movie.imageUrl && (
           <span className="px-3 text-sm font-semibold text-zinc-300">
