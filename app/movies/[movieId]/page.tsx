@@ -167,15 +167,23 @@ export default async function MovieDetailsPage({
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[420px_1fr] lg:items-start">
           <div
-            className="flex aspect-2/3 items-center justify-center rounded-3xl border border-zinc-800 bg-cover bg-center text-center shadow-xl"
+            className="flex aspect-[2/3] items-center justify-center rounded-3xl border border-zinc-800 bg-cover bg-center text-center shadow-xl"
             // movie poster/image
             // if DB has imageUrl, show it
             // if not, show dark card with title
+<<<<<<< Updated upstream
+style={{
+  backgroundImage: movie.imageUrl
+    ? `url(${movie.imageUrl})`
+    : "linear-gradient(to bottom right, #27272a, #09090b)",
+}}
+=======
             style={{
               backgroundImage: movie.imageUrl
-                ? `linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.65)), url(${movie.imageUrl})`
+                ? `url(${movie.imageUrl})`
                 : "linear-gradient(to bottom right, #27272a, #09090b)",
             }}
+>>>>>>> Stashed changes
           >
             {!movie.imageUrl && (
               <span className="px-6 text-2xl font-bold text-zinc-300">
