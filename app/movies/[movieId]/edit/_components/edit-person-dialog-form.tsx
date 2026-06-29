@@ -19,7 +19,7 @@ import { Plus } from "lucide-react";
 import z from "zod";
 import { toast } from "sonner";
 import { useState } from "react";
-import { createPerson } from "../_actions/people-actions";
+import { createPerson } from "../_actions/edit-people-actions";
 import { Textarea } from "@/components/ui/textarea";
 
 type CreatePersonDialogProps = {
@@ -70,12 +70,12 @@ function CreatePersonDialog({ onCreated }: CreatePersonDialogProps) {
 
         setOpen(false);
         await onCreated?.(forcedCreatePerson.person.id);
-        return toast.success("Successfully added person!");
+        return toast.success("Successfully created person!");
       }
 
       setOpen(false);
       await onCreated?.(newPerson.person.id);
-      toast.success("Successfully added person!");
+      toast.success("Successfully created person!");
     },
   });
 

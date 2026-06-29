@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Edit } from "lucide-react";
+import { DeleteMovieButton } from "./_components/delete-movie-button";
 
 // movie detail page
 // customer can see more information about one movie here
@@ -15,7 +20,7 @@ type MovieDetails = {
   stock: number | null;
   imageUrl: string | null;
   genres: string[];
-}; 
+};
 
 // turn DB movie into page movie
 // page only needs display data
@@ -148,6 +153,11 @@ export default async function MovieDetailsPage({
     notFound();
   }
 
+  // Get session to check if user is signed in -> IF session found, edit movie button is enabled/visible
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
   const movie = await getMovie(movieId);
 
   // movie does not exist = not found
@@ -158,12 +168,42 @@ export default async function MovieDetailsPage({
   return (
     <main className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-50 sm:px-6 sm:py-16 lg:px-8">
       <section className="mx-auto max-w-7xl">
-        <Link
-          href="/movies"
-          className="text-sm font-semibold text-red-400 transition hover:text-red-300"
-        >
-          ← Back to movies
-        </Link>
+        <div className="flex justify-between">
+          <Link
+            href="/movies"
+            className="text-sm font-semibold text-red-400 transition hover:text-red-300"
+          >
+            ← Back
+          </Link>
+          <div className="flex gap-2 items-center">
+            {session && (
+              <>
+                <Button
+                  type="button"
+                  size={"sm"}
+                  variant="default"
+                  className="cursor-pointer"
+                  asChild
+                >
+                  <Link href={`/movies/${movieId}/edit`}>
+                    Edit
+                    <Edit />
+                  </Link>
+                </Button>
+
+                <DeleteMovieButton
+                  action={async () => {
+                    "use server";
+
+                    await prisma.movie.delete({
+                      where: { id: movie.id },
+                    });
+                  }}
+                />
+              </>
+            )}
+          </div>
+        </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[420px_1fr] lg:items-start">
           <div
@@ -232,7 +272,9 @@ style={{
               <MovieInfoItem
                 label="Genre"
                 value={
-                  movie.genres.length > 0 ? movie.genres.join(", ") : "Genre TBA"
+                  movie.genres.length > 0
+                    ? movie.genres.join(", ")
+                    : "Genre TBA"
                 }
               />
             </div>

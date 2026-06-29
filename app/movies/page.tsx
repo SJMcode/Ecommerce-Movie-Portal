@@ -256,6 +256,7 @@ function MovieFiltersForm({
   <select
     name="genre"
     defaultValue={filters.genre}
+    aria-label="Genre"
     className="min-h-11 w-full appearance-none rounded-full border border-zinc-700 bg-zinc-950 px-4 pr-12 text-sm text-zinc-50 outline-none transition focus:border-red-500"
   >
     <option value="">All genres</option>

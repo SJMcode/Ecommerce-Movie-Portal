@@ -17,11 +17,20 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "@tanstack/react-form";
 import { Plus } from "lucide-react";
 import z from "zod";
-import { createGenre } from "../_actions/genre-actions";
+import { editGenre } from "../_actions/edit-genre-actions";
 import { toast } from "sonner";
 import { useState } from "react";
 
-type CreateGenreDialogProps = {
+/*
+This component should be hooked into a button in the genre search field. 
+
+-- Implementation: 
+When looking at the genre dropdown list (both in create movie page, and edit movie page), for each listed item
+there should be an edit button sitting to the far right of the listed item. 
+When clicked, should open up a dialog window to edit the name of the genre.
+*/
+
+type EditGenreDialogProps = {
   onCreated?: (createGenreId: string) => Promise<void> | void;
 }
 
@@ -31,8 +40,9 @@ const formSchema = z.object({
     .min(1, "Genre name cannot be zero characters.")
     .max(50, "Genre name cannot be longer than 50 characters"),
 });
+ 
 
-function CreateGenreDialog({ onCreated }: CreateGenreDialogProps) {
+function EditGenreDialog({ onCreated }: EditGenreDialogProps) {
   const [open, setOpen] = useState(false);
   const form = useForm({
     defaultValues: {
@@ -42,7 +52,7 @@ function CreateGenreDialog({ onCreated }: CreateGenreDialogProps) {
       onSubmit: formSchema,
     },
     onSubmit: async ({ value }) => {
-      const newGenre = await createGenre(value);
+      const newGenre = await editGenre(value);
 
       if (newGenre.ok === false) {
         return toast.error(newGenre.error);
@@ -50,7 +60,7 @@ function CreateGenreDialog({ onCreated }: CreateGenreDialogProps) {
 
       setOpen(false);
       await onCreated?.(newGenre.genre.id);
-      toast.success("Successfully added genre!");
+      toast.success("Genre successfully created!");
     },
   });
 
@@ -107,4 +117,4 @@ function CreateGenreDialog({ onCreated }: CreateGenreDialogProps) {
   );
 }
 
-export { CreateGenreDialog };
+export { EditGenreDialog };
