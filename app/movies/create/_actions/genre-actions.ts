@@ -18,6 +18,7 @@ export async function getGenres() {
   return genres;
 }
 
+
 // ------------------------------ DELETE GENRE FUNCTION
 
 export async function deleteGenreById(genreId: string) {

@@ -4,12 +4,13 @@ import { prisma } from "@/lib/prisma";
 import z from "zod";
 
 // ------------------------------ GET PEOPLE FUNCTION
-export type PeopleOption = {
+export type PersonAllDetails = {
   id: string;
   name: string;
   biography: string | null;
   imageUrl: string | null;
   imdbId: string | null;
+  updatedAt: Date
 };
 
 export async function getPeople() {
@@ -20,10 +21,30 @@ export async function getPeople() {
       biography: true,
       imageUrl: true,
       imdbId: true,
+      updatedAt: true,
     },
     orderBy: { name: "asc" },
   });
   return people;
+}
+
+// ------------------------------ GET PERSON FUNCTION
+
+export async function getPersonById(personId: string) {
+  const person = await prisma.person.findUnique({
+    select: {
+      id: true,
+      name: true,
+      biography: true,
+      imageUrl: true,
+      imdbId: true,
+    },
+    where: {
+      id: personId
+    }
+  })
+
+  return person;
 }
 
 // ------------------------------ DELETE PERSON FUNCTION

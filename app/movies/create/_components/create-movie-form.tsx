@@ -28,9 +28,11 @@ import {
 } from "@/components/ui/combobox";
 import { useEffect, useMemo, useState } from "react";
 import { CreateGenreDialog } from "./create-genre-dialog-form";
-import { deletePersonById, getPeople } from "../_actions/people-actions";
+import { deletePersonById, getPeople, PersonAllDetails } from "../_actions/people-actions";
 import { CreatePersonDialog } from "./create-person-dialog-form";
 import { Trash } from "lucide-react";
+import { HoverCard, HoverCardTrigger } from "@/components/ui/hover-card";
+import { PersonHoverCard } from "./person-hover-card";
 
 // ----------------------------------------- ZOD Validation form model/schema
 
@@ -135,12 +137,7 @@ function CreateMovieForm() {
   const [userInputDirector, setUserInputDirector] = useState("");
   const [userInputActor, setUserInputActor] = useState("");
 
-  type PeopleItem = {
-    id: string;
-    name: string;
-  };
-
-  const [people, setPeople] = useState<PeopleItem[]>([]);
+  const [people, setPeople] = useState<PersonAllDetails[]>([]);
 
   // useMemo-hook rebuilds the lookup map whenever the 'people' list is updated
   const peopleLabelMap = useMemo(() => {
@@ -161,6 +158,16 @@ function CreateMovieForm() {
 
     loadPeople();
   }, []);
+
+  // useMemo to update person-hover-card details
+  const  peopleById = useMemo(() => {
+    const lookup: Record<string, PersonAllDetails> = {};
+    people.forEach((person) => {
+      lookup[person.id] = person;
+    })
+    return lookup;
+  }, [people])
+
 
   // -------------------------------------------------------------
 
@@ -538,7 +545,15 @@ function CreateMovieForm() {
                       {(item) => (
                         <ComboboxItem key={item} value={item}>
                           <div className="w-full flex justify-between items-center">
-                            {peopleLabelMap[item] ?? item}
+                            <HoverCard openDelay={10} closeDelay={100}>
+                              <HoverCardTrigger asChild>
+                                <span className="cursor-pointer">{peopleLabelMap[item] ?? item}</span>
+                              </HoverCardTrigger>
+                              <PersonHoverCard 
+                              
+                              person={peopleById[item]} 
+                              />
+                            </HoverCard>
                             {
                               <Button
                                 type="button"
@@ -653,7 +668,14 @@ function CreateMovieForm() {
                       {(item) => (
                         <ComboboxItem key={item} value={item}>
                           <div className="w-full flex justify-between items-center">
-                            {peopleLabelMap[item] ?? item}
+                            <HoverCard openDelay={10} closeDelay={100}>
+                              <HoverCardTrigger asChild>
+                                <span className="cursor-pointer">
+                                  {peopleLabelMap[item] ?? item}
+                                </span>
+                              </HoverCardTrigger>
+                              <PersonHoverCard person={peopleById[item]}  />
+                            </HoverCard>
                             {
                               <Button
                                 type="button"
