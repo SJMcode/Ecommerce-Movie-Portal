@@ -9,21 +9,28 @@ import {
   DialogHeader,
   DialogPortal,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "@tanstack/react-form";
-import { Plus } from "lucide-react";
 import z from "zod";
 import { toast } from "sonner";
-import { useState } from "react";
-import { createPerson } from "../_actions/edit-people-actions";
-import { Textarea } from "@/components/ui/textarea";
 
-type CreatePersonDialogProps = {
-  onCreated?: (createPersonId: string) => Promise<void> | void;
+import { Textarea } from "@/components/ui/textarea";
+import { updatePerson } from "../_actions/edit-people-actions";
+
+type EditPersonDialogProps = {
+  person: {
+    id: string;
+    name: string;
+    biography: string | null;
+    imageUrl: string | null;
+    imdbId: string | null;
+  };
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdated?: (updatedPersonId: string) => Promise<void> | void;
 };
 
 const formSchema = z.object({
@@ -33,60 +40,44 @@ const formSchema = z.object({
   imdbId: z.string().trim(),
 });
 
-function CreatePersonDialog({ onCreated }: CreatePersonDialogProps) {
-  const [open, setOpen] = useState(false); //Opens closes dialog window by changing useState value (boolean)
+function EditPersonDialogForm({
+  person,
+  open,
+  onOpenChange,
+  onUpdated,
+}: EditPersonDialogProps) {
   const form = useForm({
     defaultValues: {
-      name: "",
-      biography: "",
-      imageUrl: "",
-      imdbId: "",
+      name: person.name,
+      biography: person.biography ?? "",
+      imageUrl: person.imageUrl ?? "",
+      imdbId: person.imdbId ?? "",
     },
     validators: {
       onSubmit: formSchema,
     },
     onSubmit: async ({ value }) => {
-      const newPerson = await createPerson(value);
+      const updatedPerson = await updatePerson({
+        id: person.id,
+        name: value.name,
+        biography: value.biography,
+        imageUrl: value.imageUrl,
+        imdbId: value.imdbId,
+      });
 
       // Hard failure from server-side validation (e.g., duplicate imdbId).
-      if (newPerson.ok === false) {
-        return toast.error(newPerson.error);
+      if (updatedPerson.ok === false) {
+        return toast.error(updatedPerson.error);
       }
 
-      // Soft duplicate-name case: ask user whether to force-create anyway.
-      if (newPerson.ok === "duplicate-name") {
-        const proceed = window.confirm(`${newPerson.error}. Continue anyway?`);
-        if (!proceed) return;
-
-        const forcedCreatePerson = await createPerson({
-          ...value,
-          forceCreate: true,
-        });
-
-        // Forced create can still fail (e.g., imdbId conflict); surface that error.
-        if (forcedCreatePerson.ok !== true) {
-          return toast.error(forcedCreatePerson.error);
-        }
-
-        setOpen(false);
-        await onCreated?.(forcedCreatePerson.person.id);
-        return toast.success("Successfully created person!");
-      }
-
-      setOpen(false);
-      await onCreated?.(newPerson.person.id);
-      toast.success("Successfully created person!");
+      onOpenChange(false);
+      await onUpdated?.(updatedPerson.person.id);
+      toast.success("Successfully updated person details!");
     },
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}> {/* props here control open/closing of dialog window */}
-      <DialogTrigger asChild>
-        <Button type="button" variant="secondary" size={"sm"}>
-          New person
-          <Plus />
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
         <DialogContent className="sm:max-w-sm">
           <form
@@ -98,7 +89,7 @@ function CreatePersonDialog({ onCreated }: CreatePersonDialogProps) {
             }}
           >
             <DialogHeader>
-              <DialogTitle className="mx-auto">Create new person</DialogTitle>
+              <DialogTitle className="mx-auto">Edit person</DialogTitle>
             </DialogHeader>
 
             <form.Field name="name">
@@ -180,4 +171,4 @@ function CreatePersonDialog({ onCreated }: CreatePersonDialogProps) {
   );
 }
 
-export { CreatePersonDialog };
+export { EditPersonDialogForm };

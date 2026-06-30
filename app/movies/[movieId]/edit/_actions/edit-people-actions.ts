@@ -10,7 +10,7 @@ export type PersonAllDetails = {
   biography: string | null;
   imageUrl: string | null;
   imdbId: string | null;
-  updatedAt: Date
+  updatedAt: Date;
 };
 
 export async function getPeople() {
@@ -40,9 +40,9 @@ export async function getPersonById(personId: string) {
       imdbId: true,
     },
     where: {
-      id: personId
-    }
-  })
+      id: personId,
+    },
+  });
 
   return person;
 }
@@ -52,68 +52,59 @@ export async function getPersonById(personId: string) {
 export async function deletePersonById(personId: string) {
   const deleted = await prisma.person.delete({
     where: {
-      id: personId
-    }
-  })
+      id: personId,
+    },
+  });
 
   return deleted;
 }
 
 // ------------------------------ CREATE PERSON FUNCTION
 
-type PersonString = {
+type UpdatePersonInput = {
+  id: string;
   name: string;
-  biography?: string;
-  imageUrl?: string;
-  imdbId?: string;
-  forceCreate?: boolean;
+  biography?: string | null;
+  imageUrl?: string | null;
+  imdbId?: string | null;
 };
 
 // If biography, imageUrl or imdbId are empty strings, they are transformed into undefined -> in DB this resolves to NULL (since they are nullable in schema)
-const createPersonSchema = z.object({
+const updatePersonSchema = z.object({
+  id: z.string().trim().min(1, "Person id is required"),
   name: z.string().trim().min(1, "Name cannot be zero characters."),
   biography: z
     .string()
     .trim()
     .optional()
-    .transform((value) => (value === "" ? undefined : value)),
+    .transform((value) => (value === "" ? null : value)),
   imageUrl: z
     .string()
     .trim()
     .optional()
-    .transform((value) => (value === "" ? undefined : value)),
+    .transform((value) => (value === "" ? null : value)),
   imdbId: z
     .string()
     .trim()
     .optional()
-    .transform((value) => (value === "" ? undefined : value)),
-  forceCreate: z.boolean().optional(),
+    .transform((value) => (value === "" ? null : value)),
 });
 
-type CreatePersonResult =
+type UpdatePersonResult =
   | { ok: true; person: { id: string } } // if no match is found, clientside receives ok: true and the person id
-  | { ok: "duplicate-name"; error: string } // if the same name is found in db -> alert user to confirm create on clientside (soft block) and await response before creating/aborting
   | { ok: false; error: string }; // if imdbId is found in db -> does not create and sends back error message (hard block)
 
-export async function createPerson(
-  values: PersonString,
-): Promise<CreatePersonResult> {
-  const data = createPersonSchema.parse(values);
+export async function updatePerson(
+  values: UpdatePersonInput,
+): Promise<UpdatePersonResult> {
+  const data = updatePersonSchema.parse(values);
 
-  const imdbId = data.imdbId?.trim() || undefined;
-
-  // This create flow uses two server calls for duplicate names: 
-  // - the first call checks for conflicts and returns ok: "duplicate-name" 
-  //   when a same-name person exists (and no imdbId conflict). 
-  // - The client then asks the user to confirm. 
-  // - If they agree, it sends a second call with forceCreate: true, 
-  //   which skips the duplicate-name guard and proceeds to create the person. 
-  // - imdbId duplicates remain a hard block in both cases.
-
-  // hard block by imdbId
-  if (imdbId) {
+  if (data.imdbId) {
     const existingByImdb = await prisma.person.findFirst({
-      where: { imdbId },
+      where: { 
+        imdbId: data.imdbId,
+        id: { not: data.id } },
+        select: { id: true },
     });
 
     if (existingByImdb) {
@@ -124,28 +115,20 @@ export async function createPerson(
     }
   }
 
-  // soft block by name only when user has not confirmed override
-  if (!data.forceCreate) {
-    const existingByName = await prisma.person.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" } },
-    });
-
-    if (existingByName && !imdbId) {
-      return {
-        ok: "duplicate-name",
-        error: "A person with that name already exists in the database",
-      };
-    }
+  try {
+    const updated = await prisma.person.update({
+      where: { id: data.id },
+      data: {
+        name: data.name,
+        biography: data.biography ?? null,
+        imageUrl: data.imageUrl ?? null,
+        imdbId: data.imdbId ?? null,
+      },
+      select: { id: true },
+    })
+    
+    return { ok: true, person: { id: updated.id}}
+  } catch {
+    return { ok: false, error: "Person not found or could not be updated" }
   }
-
-  const newPerson = await prisma.person.create({
-    data: {
-      name: data.name,
-      biography: data.biography,
-      imageUrl: data.imageUrl,
-      imdbId: imdbId,
-    },
-  });
-
-  return { ok: true, person: { id: newPerson.id } };
 }

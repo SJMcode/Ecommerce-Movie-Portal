@@ -20,9 +20,10 @@ export async function getGenres() {
 
 // ------------------------------ GET GENRE BY ID FUNCTION 
 
-export async function getGenreById(genreId: string) {
+export async function getGenreById(genreId: string): Promise<{ id: string; name: string; } | null> {
   const genre = prisma.genre.findUnique({
     select: {
+      id: true,
       name: true,
     },
     where: {
@@ -45,27 +46,21 @@ export async function deleteGenreById(genreId: string) {
   return deleted;
 }
 
-// ------------------------------ CREATE GENRE FUNCTION
+// -------------------------------- UPDATE GENRE FUNCTION
 
-type GenreString = {
-  name: string;
-};
-
-type CreateGenreResult =
+type EditGenreResult =
   | { ok: true; genre: { id: string } }
   | { ok: false; error: string };
 
-const createGenreSchema = z.object({
+    const editGenreSchema = z.object({
+  id: z.string(),
   name: z
     .string().trim().min(1, "Genre name cannot be zero characters."),
 });
 
+export async function editGenre(values: z.infer<typeof editGenreSchema>): Promise<EditGenreResult> {
 
-
-async function editGenre(values: GenreString): Promise<CreateGenreResult> {
-
-
-  const data = createGenreSchema.parse(values);
+  const data = editGenreSchema.parse(values);
   
     const checkForDuplicate = await prisma.genre.findFirst({
       where: {
@@ -74,16 +69,18 @@ async function editGenre(values: GenreString): Promise<CreateGenreResult> {
     });
   
     if (checkForDuplicate) {
-      return { ok: false, error: "The genre already exists in the database" };
+      return { ok: false, error: "The genre name already exists in the database" };
     }
   
-    const newGenre = await prisma.genre.create({
+    const updatedGenre = await prisma.genre.update({
       data: {
         name: data.name
       },
+      where: {
+        id: data.id
+      }
     });
   
-    return { ok: true, genre: { id: newGenre.id } };
+    return { ok: true, genre: { id: updatedGenre.id } };
 }
 
-export { editGenre }

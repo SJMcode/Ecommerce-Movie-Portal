@@ -35,36 +35,15 @@ const createMovieSchema = z.object({
   description: z
     .string()
     .max(500, "Content cannot be longer than 250 characters"),
-  price: z
-    .string()
-    .min(1, "Price is required")
-    .transform(Number)
-    .refine((v) => !Number.isNaN(v), "Price must be a number")
-    .refine((v) => v > 0, "Price must be greater than 0"),
-  releaseDate: z
-    .string()
-    .transform(Number)
-    .refine((v) => !isNaN(v), "Year must be a number")
-    .refine(
-      (v) => v > firstMovieYear,
-      `No movie was released before ${firstMovieYear}`,
-    )
-    .refine(
-      (v) => v < currentYear,
-      `Release year cannot be greater than ${currentYear}`,
-    ),
+  price: z.coerce.number().gt(0, "Price must be greater than 0"),
+  releaseDate: z.coerce
+      .number()
+      .int("Year must be a whole number")
+      .gt(firstMovieYear, `No movie was released before ${firstMovieYear}`)
+      .lt(currentYear, `Release year cannot be greater than ${currentYear}`),
   imageUrl: z.string(),
-  stock: z
-    .string()
-    .transform(Number)
-    .refine((v) => v >= 0, "Stock cannot be less than zero"),
-  runtime: z
-    .string()
-    .transform(Number)
-    .refine(
-      (v) => !isNaN(v) && v >= 0,
-      "Runtime must be a number and cannot be a negative value",
-    ),
+  stock: z.coerce.number().int().min(0, "Stock cannot be less than zero"),
+  runtime: z.coerce.number().int().min(0, "Runtime cannot be negative"),
   genres: z.array(z.string()).min(1, "Select at least one genre"),
   directors: z.array(z.string()).min(1, "Select at least one director"),
   cast: z.array(z.string())

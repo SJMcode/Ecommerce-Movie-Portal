@@ -35,8 +35,8 @@ const editMovieSchema = z.object({
   imageUrl: z.string(),
   stock: z.coerce.number().int().min(0, "Stock cannot be less than zero"),
   runtime: z.coerce.number().int().min(0, "Runtime cannot be negative"),
-  genres: z.array(z.string()).min(1, "Select at least one genre"),
-  directors: z.array(z.string()).min(1, "Select at least one director"),
+  genres: z.array(z.string()),
+  directors: z.array(z.string()),
   cast: z.array(z.string()),
 });
 

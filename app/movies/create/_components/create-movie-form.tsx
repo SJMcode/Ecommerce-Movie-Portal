@@ -28,11 +28,18 @@ import {
 } from "@/components/ui/combobox";
 import { useEffect, useMemo, useState } from "react";
 import { CreateGenreDialog } from "./create-genre-dialog-form";
-import { deletePersonById, getPeople, PersonAllDetails } from "../_actions/people-actions";
+import {
+  deletePersonById,
+  getPeople,
+  PersonAllDetails,
+} from "../_actions/people-actions";
 import { CreatePersonDialog } from "./create-person-dialog-form";
-import { Trash } from "lucide-react";
+import { Edit, Trash } from "lucide-react";
 import { HoverCard, HoverCardTrigger } from "@/components/ui/hover-card";
 import { PersonHoverCard } from "./person-hover-card";
+import { Textarea } from "@/components/ui/textarea";
+import { EditGenreDialogForm } from "@/app/movies/[movieId]/edit/_components/edit-genre-dialog-form";
+import { EditPersonDialogForm } from "@/app/movies/[movieId]/edit/_components/edit-person-dialog-form";
 
 // ----------------------------------------- ZOD Validation form model/schema
 
@@ -139,6 +146,20 @@ function CreateMovieForm() {
 
   const [people, setPeople] = useState<PersonAllDetails[]>([]);
 
+  // ------------ State control for "edit button" dialog windows
+  // GENRE EDIT
+  const [editingGenre, setIsEditingGenre] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [isEditGenreOpen, setIsEditGenreOpen] = useState(false);
+
+  // PERSON EDIT
+  const [editingPerson, setEditingPerson] = useState<PersonAllDetails | null>(
+    null,
+  );
+  const [isEditPersonOpen, setIsEditPersonOpen] = useState(false);
+
   // useMemo-hook rebuilds the lookup map whenever the 'people' list is updated
   const peopleLabelMap = useMemo(() => {
     const lookup: Record<string, string> = {};
@@ -160,14 +181,13 @@ function CreateMovieForm() {
   }, []);
 
   // useMemo to update person-hover-card details
-  const  peopleById = useMemo(() => {
+  const peopleById = useMemo(() => {
     const lookup: Record<string, PersonAllDetails> = {};
     people.forEach((person) => {
       lookup[person.id] = person;
-    })
+    });
     return lookup;
-  }, [people])
-
+  }, [people]);
 
   // -------------------------------------------------------------
 
@@ -178,7 +198,7 @@ function CreateMovieForm() {
       price: "",
       releaseDate: "",
       imageUrl: "",
-      stock: "", // default in prisma schema is set to 50
+      stock: "50", // default in prisma schema is set to 50
       runtime: "",
       genres: [] as string[],
       directors: [] as string[],
@@ -240,13 +260,14 @@ function CreateMovieForm() {
             return (
               <Field data-invalid={isInvalid}>
                 <FieldLabel htmlFor={field.name}>Description</FieldLabel>
-                <Input
+                <Textarea
                   id={field.name}
                   name={field.name}
                   value={field.state.value}
                   onChange={(ev) => field.handleChange(ev.target.value)}
                   onBlur={field.handleBlur}
                   aria-invalid={isInvalid}
+                  className="min-h-36 resize-y"
                 />
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>
@@ -433,49 +454,88 @@ function CreateMovieForm() {
                   <ComboboxContent anchor={genresAnchor}>
                     <ComboboxEmpty>No items found.</ComboboxEmpty>
                     <ComboboxList>
-                      {(item) => (
-                        <ComboboxItem key={item} value={item}>
-                          <div className="w-full flex justify-between items-center">
-                            {genreLabelMap[item] ?? item}
-                            {
-                              <Button
-                                variant="destructive"
-                                type="button"
-                                onClick={async (e) => {
-                                  e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
-                                  const confirmDelete = window.confirm(
-                                    `Are you sure you wish to delete ${genreLabelMap[item]}? This will also remove it from any connected movies.`,
-                                  );
-                                  if (confirmDelete) {
-                                    const deletedGenre =
-                                      await deleteGenreById(item);
-                                    const updateList = await getGenres();
-                                    setGenres(updateList);
-                                    field.handleChange(
-                                      Array.from(
-                                        new Set(
-                                          field.state.value.filter(
-                                            (id) => id !== item,
+                      {(item) => {
+                        const genre = genres.find((g) => g.id === item);
+                        if (!genre) return null;
+                        return (
+                          <ComboboxItem key={item} value={item}>
+                            <div className="w-full flex justify-between items-center">
+                              {genreLabelMap[item] ?? item}
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size={"icon-lg"}
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    setIsEditingGenre(genre);
+                                    setIsEditGenreOpen(true);
+                                  }}
+                                >
+                                  <Edit />
+                                </Button>
+
+                                <Button
+                                  variant="destructive"
+                                  type="button"
+                                  size={"icon-lg"}
+                                  onClick={async (e) => {
+                                    e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
+                                    const confirmDelete = window.confirm(
+                                      `Are you sure you wish to delete ${genreLabelMap[item]}? This will also remove it from any connected movies.`,
+                                    );
+                                    if (confirmDelete) {
+                                      const deletedGenre =
+                                        await deleteGenreById(item);
+                                      const updateList = await getGenres();
+                                      setGenres(updateList);
+                                      field.handleChange(
+                                        Array.from(
+                                          new Set(
+                                            field.state.value.filter(
+                                              (id) => id !== item,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                    toast.success(
-                                      `${genreLabelMap[item]} was successfully deleted.`,
-                                    );
-                                    return deletedGenre;
-                                  }
-                                }}
-                              >
-                                <Trash />
-                              </Button>
-                            }
-                          </div>
-                        </ComboboxItem>
-                      )}
+                                      );
+                                      toast.success(
+                                        `${genreLabelMap[item]} was successfully deleted.`,
+                                      );
+                                      return deletedGenre;
+                                    }
+                                  }}
+                                >
+                                  <Trash />
+                                </Button>
+                              </div>
+                            </div>
+                          </ComboboxItem>
+                        );
+                      }}
                     </ComboboxList>
                   </ComboboxContent>
                 </Combobox>
+
+                {editingGenre && (
+                  <EditGenreDialogForm
+                    key={editingGenre.id}
+                    genre={editingGenre}
+                    open={isEditGenreOpen}
+                    onOpenChange={(open) => {
+                      setIsEditGenreOpen(open);
+                      if (!open) setIsEditingGenre(null);
+                    }}
+                    onUpdated={async () => {
+                      const latestGenres = await getGenres();
+                      setGenres(latestGenres);
+                    }}
+                  />
+                )}
 
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>
@@ -542,60 +602,81 @@ function CreateMovieForm() {
                   <ComboboxContent anchor={directorAnchor}>
                     <ComboboxEmpty>No items found.</ComboboxEmpty>
                     <ComboboxList>
-                      {(item) => (
-                        <ComboboxItem key={item} value={item}>
-                          <div className="w-full flex justify-between items-center">
-                            <HoverCard openDelay={10} closeDelay={100}>
-                              <HoverCardTrigger asChild>
-                                <span className="cursor-pointer">{peopleLabelMap[item] ?? item}</span>
-                              </HoverCardTrigger>
-                              <PersonHoverCard 
-                              
-                              person={peopleById[item]} 
-                              />
-                            </HoverCard>
-                            {
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={async (e) => {
-                                  e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
-                                  const confirmDelete = window.confirm(
-                                    `Are you sure you wish to delete ${peopleLabelMap[item]}? This will also remove them from any connected movies.`,
-                                  );
-                                  if (confirmDelete) {
-                                    const deletedPerson =
-                                      await deletePersonById(item);
-                                    const updateList = await getPeople();
-                                    setPeople(updateList);
-                                    field.handleChange(
-                                      Array.from(
-                                        new Set(
-                                          field.state.value.filter(
-                                            (id) => id !== item,
+                      {(item) => {
+                        const person = peopleById[item];
+                        if (!person) return null;
+                        return (
+                          <ComboboxItem key={item} value={item}>
+                            <div className="w-full flex justify-between items-center">
+                              <HoverCard openDelay={10} closeDelay={100}>
+                                <HoverCardTrigger asChild>
+                                  <span className="cursor-pointer">
+                                    {peopleLabelMap[item] ?? item}
+                                  </span>
+                                </HoverCardTrigger>
+                                <PersonHoverCard person={peopleById[item]} />
+                              </HoverCard>
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size={"icon-lg"}
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setEditingPerson(person);
+                                    setIsEditPersonOpen(true);
+                                  }}
+                                >
+                                  <Edit />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size={"icon-lg"}
+                                  variant="destructive"
+                                  onClick={async (e) => {
+                                    e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
+                                    const confirmDelete = window.confirm(
+                                      `Are you sure you wish to delete ${peopleLabelMap[item]}? This will also remove them from any connected movies.`,
+                                    );
+                                    if (confirmDelete) {
+                                      const deletedPerson =
+                                        await deletePersonById(item);
+                                      const updateList = await getPeople();
+                                      setPeople(updateList);
+                                      field.handleChange(
+                                        Array.from(
+                                          new Set(
+                                            field.state.value.filter(
+                                              (id) => id !== item,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                    form.setFieldValue(
-                                      "cast",
-                                      form.state.values.cast.filter(
-                                        (id) => id !== item,
-                                      ),
-                                    );
-                                    toast.success(
-                                      `${peopleLabelMap[item]} was successfully deleted.`,
-                                    );
-                                    return deletedPerson;
-                                  }
-                                }}
-                              >
-                                <Trash />
-                              </Button>
-                            }
-                          </div>
-                        </ComboboxItem>
-                      )}
+                                      );
+                                      form.setFieldValue(
+                                        "cast",
+                                        form.state.values.cast.filter(
+                                          (id) => id !== item,
+                                        ),
+                                      );
+                                      toast.success(
+                                        `${peopleLabelMap[item]} was successfully deleted.`,
+                                      );
+                                      return deletedPerson;
+                                    }
+                                  }}
+                                >
+                                  <Trash />
+                                </Button>
+                              </div>
+                            </div>
+                          </ComboboxItem>
+                        );
+                      }}
                     </ComboboxList>
                   </ComboboxContent>
                 </Combobox>
@@ -665,62 +746,101 @@ function CreateMovieForm() {
                   <ComboboxContent anchor={castAnchor}>
                     <ComboboxEmpty>No items found.</ComboboxEmpty>
                     <ComboboxList>
-                      {(item) => (
-                        <ComboboxItem key={item} value={item}>
-                          <div className="w-full flex justify-between items-center">
-                            <HoverCard openDelay={10} closeDelay={100}>
-                              <HoverCardTrigger asChild>
-                                <span className="cursor-pointer">
-                                  {peopleLabelMap[item] ?? item}
-                                </span>
-                              </HoverCardTrigger>
-                              <PersonHoverCard person={peopleById[item]}  />
-                            </HoverCard>
-                            {
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={async (e) => {
-                                  e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
-                                  const confirmDelete = window.confirm(
-                                    `Are you sure you wish to delete ${peopleLabelMap[item]}? This will also remove them from any connected movies.`,
-                                  );
-                                  if (confirmDelete) {
-                                    const deletedPerson =
-                                      await deletePersonById(item);
-                                    const updateList = await getPeople();
-                                    setPeople(updateList);
-                                    field.handleChange(
-                                      Array.from(
-                                        new Set(
-                                          field.state.value.filter(
-                                            (id) => id !== item,
+                      {(item) => {
+                        const person = peopleById[item];
+                        if (!person) return null;
+                        return (
+                          <ComboboxItem key={item} value={item}>
+                            <div className="w-full flex justify-between items-center">
+                              <HoverCard openDelay={10} closeDelay={100}>
+                                <HoverCardTrigger asChild>
+                                  <span className="cursor-pointer">
+                                    {peopleLabelMap[item] ?? item}
+                                  </span>
+                                </HoverCardTrigger>
+                                <PersonHoverCard person={peopleById[item]} />
+                              </HoverCard>
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size={"icon-lg"}
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setEditingPerson(person);
+                                    setIsEditPersonOpen(true);
+                                  }}
+                                >
+                                  <Edit />
+                                </Button>
+
+                                <Button
+                                  type="button"
+                                  size={"icon-lg"}
+                                  variant="destructive"
+                                  onClick={async (e) => {
+                                    e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
+                                    const confirmDelete = window.confirm(
+                                      `Are you sure you wish to delete ${peopleLabelMap[item]}? This will also remove them from any connected movies.`,
+                                    );
+                                    if (confirmDelete) {
+                                      const deletedPerson =
+                                        await deletePersonById(item);
+                                      const updateList = await getPeople();
+                                      setPeople(updateList);
+                                      field.handleChange(
+                                        Array.from(
+                                          new Set(
+                                            field.state.value.filter(
+                                              (id) => id !== item,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                    form.setFieldValue(
-                                      "directors",
-                                      form.state.values.directors.filter(
-                                        (id) => id !== item,
-                                      ),
-                                    );
-                                    toast.success(
-                                      `${peopleLabelMap[item]} was successfully deleted.`,
-                                    );
-                                    return deletedPerson;
-                                  }
-                                }}
-                              >
-                                <Trash />
-                              </Button>
-                            }
-                          </div>
-                        </ComboboxItem>
-                      )}
+                                      );
+                                      form.setFieldValue(
+                                        "directors",
+                                        form.state.values.directors.filter(
+                                          (id) => id !== item,
+                                        ),
+                                      );
+                                      toast.success(
+                                        `${peopleLabelMap[item]} was successfully deleted.`,
+                                      );
+                                      return deletedPerson;
+                                    }
+                                  }}
+                                >
+                                  <Trash />
+                                </Button>
+                              </div>
+                            </div>
+                          </ComboboxItem>
+                        );
+                      }}
                     </ComboboxList>
                   </ComboboxContent>
                 </Combobox>
+
+                {editingPerson && (
+                  <EditPersonDialogForm
+                    key={editingPerson.id}
+                    person={editingPerson}
+                    open={isEditPersonOpen}
+                    onOpenChange={(open) => {
+                      setIsEditPersonOpen(open);
+                      if (!open) setEditingPerson(null);
+                    }}
+                    onUpdated={async () => {
+                      const latestPeople = await getPeople();
+                      setPeople(latestPeople);
+                    }}
+                  />
+                )}
 
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>

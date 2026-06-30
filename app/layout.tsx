@@ -18,7 +18,7 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 });
 
-export default async function RootLayout({ 
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -75,21 +75,27 @@ export default async function RootLayout({
                   Cart
                 </Link>
 
-                <Link
-                  href="/dashboard"
-                  className="transition hover:text-white"
-                >
+                <Link href="/dashboard" className="transition hover:text-white">
                   Dashboard
                 </Link>
 
                 {session ? (
                   // user is logged in
-                  <SignOutButton
-                    variant="ghost"
-                    className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
-                  >
-                    Sign Out
-                  </SignOutButton>
+                  <>
+                    <Link
+                      href="/create"
+                      className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
+                    >
+                      Create movie
+                    </Link>
+
+                    <SignOutButton
+                      variant="ghost"
+                      className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
+                    >
+                      Sign Out
+                    </SignOutButton>
+                  </>
                 ) : (
                   // user is not logged in
                   <>

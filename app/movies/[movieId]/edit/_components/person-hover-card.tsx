@@ -1,5 +1,5 @@
 import { HoverCardContent } from "@/components/ui/hover-card";
-import type { PersonAllDetails } from "../_actions/people-actions";
+import type { PersonAllDetails } from "../_actions/edit-people-actions";
 import Image from "next/image";
 
 type PersonHoverCardProps = {
@@ -30,13 +30,13 @@ function PersonHoverCard({ person }: PersonHoverCardProps) {
     >
      
       <div className="flex flex-col gap-2">
-        <div className="flex justify-around items-center">
+        <div className="flex justify-around items-center gap-2">
              <Image
         src={safeImageSrc}
         alt={person?.name ? `${person.name} portrait` : "Person portrait"}
         width={64}
         height={64}
-        className="rounded-md object-cover"
+        className="h-auto rounded-md object-cover"
         sizes="64px"
       />
         <h1 className="font-semibold">{person?.name ?? "Unknown name"}</h1>

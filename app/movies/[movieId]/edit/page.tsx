@@ -43,7 +43,7 @@ async function EditMoviePage(props: PageProps<"/movies/[movieId]/edit">) {
     id: movie.id,
     title: movie.title ?? "",
     description: movie.description ?? "",
-    price: movie.price.toString(), //Why toString() here, and not String()?
+    price: movie.price.toString(),
     releaseDate: String(movie.releaseDate),
     imageUrl: movie.imageUrl ?? "",
     stock: String(movie.stock ?? 0),

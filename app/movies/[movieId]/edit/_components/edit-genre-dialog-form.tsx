@@ -9,17 +9,14 @@ import {
   DialogHeader,
   DialogPortal,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "@tanstack/react-form";
-import { Plus } from "lucide-react";
 import z from "zod";
 import { editGenre } from "../_actions/edit-genre-actions";
 import { toast } from "sonner";
-import { useState } from "react";
 
 /*
 This component should be hooked into a button in the genre search field. 
@@ -31,8 +28,11 @@ When clicked, should open up a dialog window to edit the name of the genre.
 */
 
 type EditGenreDialogProps = {
-  onCreated?: (createGenreId: string) => Promise<void> | void;
-}
+  genre: { id: string; name: string };
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdated?: (updatedGenreId: string) => Promise<void> | void;
+};
 
 const formSchema = z.object({
   name: z
@@ -40,81 +40,79 @@ const formSchema = z.object({
     .min(1, "Genre name cannot be zero characters.")
     .max(50, "Genre name cannot be longer than 50 characters"),
 });
- 
 
-function EditGenreDialog({ onCreated }: EditGenreDialogProps) {
-  const [open, setOpen] = useState(false);
+// function EditGenreDialogForm({ onCreated }: EditGenreDialogProps) {
+function EditGenreDialogForm({
+  genre,
+  open,
+  onOpenChange,
+  onUpdated,
+}: EditGenreDialogProps) {
   const form = useForm({
     defaultValues: {
-      name: "",
+      name: genre.name,
     },
     validators: {
+      onChange: formSchema,
       onSubmit: formSchema,
     },
     onSubmit: async ({ value }) => {
-      const newGenre = await editGenre(value);
+      const updatedGenre = await editGenre({ id: genre.id, name: value.name });
 
-      if (newGenre.ok === false) {
-        return toast.error(newGenre.error);
+      if (updatedGenre.ok === false) {
+        return toast.error(updatedGenre.error);
       }
 
-      setOpen(false);
-      await onCreated?.(newGenre.genre.id);
-      toast.success("Genre successfully created!");
+      onOpenChange(false);
+      await onUpdated?.(updatedGenre.genre.id);
+      toast.success("Genre successfully updated!");
     },
   });
 
   return (
-    
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button type="button" variant="secondary" size={"sm"}>
-          New genre
-          <Plus />
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
-      <DialogContent className="sm:max-w-sm">
-        <form
-          method="POST"
-          onSubmit={(ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            form.handleSubmit(ev);
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="mx-auto">Create new genre</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-sm">
+          <form
+            method="POST"
+            onSubmit={(ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              form.handleSubmit(ev);
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle className="mx-auto">Edit genre</DialogTitle>
+            </DialogHeader>
 
-          <form.Field name="name">
-            {(field) => (
-              <Field className="py-2">
-                <Label htmlFor={field.name}>Genre Name</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onChange={(ev) => field.handleChange(ev.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              </Field>
-            )}
-          </form.Field>
+            <form.Field name="name">
+              {(field) => (
+                <Field className="py-2">
+                  <Label htmlFor={field.name}>Genre Name</Label>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onChange={(ev) => field.handleChange(ev.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                </Field>
+              )}
+            </form.Field>
 
-          <DialogFooter className="py-2">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="submit">Save</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+            <DialogFooter className="py-2">
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </DialogPortal>
     </Dialog>
   );
 }
 
-export { EditGenreDialog };
+export { EditGenreDialogForm };
