@@ -211,19 +211,11 @@ export default async function MovieDetailsPage({
             // movie poster/image
             // if DB has imageUrl, show it
             // if not, show dark card with title
-<<<<<<< Updated upstream
-style={{
-  backgroundImage: movie.imageUrl
-    ? `url(${movie.imageUrl})`
-    : "linear-gradient(to bottom right, #27272a, #09090b)",
-}}
-=======
-            style={{
+            style={{ 
               backgroundImage: movie.imageUrl
                 ? `url(${movie.imageUrl})`
                 : "linear-gradient(to bottom right, #27272a, #09090b)",
             }}
->>>>>>> Stashed changes
           >
             {!movie.imageUrl && (
               <span className="px-6 text-2xl font-bold text-zinc-300">
