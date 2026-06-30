@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -158,6 +158,20 @@ export default async function MovieDetailsPage({
     headers: await headers(),
   });
 
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  // 2. Fetch the user's role from the database
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  if (dbUser?.role !== "admin") {
+    redirect("/movies");
+  }
+
   const movie = await getMovie(movieId);
 
   // movie does not exist = not found
@@ -195,6 +209,21 @@ export default async function MovieDetailsPage({
                   action={async () => {
                     "use server";
 
+                    // Re-verify session on action invocation
+                    const session = await auth.api.getSession({
+                      headers: await headers(),
+                    });
+                    if (!session) throw new Error("Unauthorized");
+
+                    // Re-verify user role in DB
+                    const dbUser = await prisma.user.findUnique({
+                      where: { id: session.user.id },
+                      select: { role: true },
+                    });
+                    if (dbUser?.role !== "admin") {
+                      throw new Error("Forbidden: Admins only");
+                    }
+
                     await prisma.movie.delete({
                       where: { id: movie.id },
                     });
@@ -211,19 +240,11 @@ export default async function MovieDetailsPage({
             // movie poster/image
             // if DB has imageUrl, show it
             // if not, show dark card with title
-<<<<<<< Updated upstream
-style={{
-  backgroundImage: movie.imageUrl
-    ? `url(${movie.imageUrl})`
-    : "linear-gradient(to bottom right, #27272a, #09090b)",
-}}
-=======
             style={{
               backgroundImage: movie.imageUrl
                 ? `url(${movie.imageUrl})`
                 : "linear-gradient(to bottom right, #27272a, #09090b)",
             }}
->>>>>>> Stashed changes
           >
             {!movie.imageUrl && (
               <span className="px-6 text-2xl font-bold text-zinc-300">
