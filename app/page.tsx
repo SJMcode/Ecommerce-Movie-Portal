@@ -2,6 +2,8 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
 // hero image
 // w x h = width x height
@@ -455,7 +457,9 @@ function Footer() {
 // async because it reads from Prisma before rendering
 export default async function Home() {
   const movieSections = await getLandingMovieSections();
-
+  const session = await auth.api.getSession({
+  headers: await headers(),
+});
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <section
@@ -492,12 +496,21 @@ export default async function Home() {
               Browse all movies
             </Link>
 
-            <Link
-              href="/sign-in"
-              className="rounded-full border border-white/40 bg-black/20 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              Sign in
-            </Link>
+{session ? (
+  <Link
+    href="/cart"
+    className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
+  >
+    Go to cart
+  </Link>
+) : (
+  <Link
+    href="/sign-in"
+    className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
+  >
+    Sign in
+  </Link>
+)}
           </div>
         </div>
       </section>
