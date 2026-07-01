@@ -70,9 +70,11 @@ return cart.items.map((item) => {
 function EmptyCartState({
   title,
   description,
+  showSignIn = false,
 }: {
   title: string;
   description: string;
+  showSignIn?: boolean;
 }) {
   return (
     <div className="mt-10 rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center">
@@ -90,12 +92,14 @@ function EmptyCartState({
           Browse movies
         </Link>
 
-        <Link
-          href="/sign-in"
-          className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
-        >
-          Sign in
-        </Link>
+{showSignIn && (
+  <Link
+    href="/sign-in"
+    className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
+  >
+    Sign in
+  </Link>
+)}
       </div>
     </div>
   );
@@ -119,10 +123,11 @@ export default async function CartPage() {
             Your cart
           </h1>
 
-          <EmptyCartState
-            title="Sign in to see your cart."
-            description="Your cart is connected to your account, so you need to sign in before reviewing your movies."
-          />
+<EmptyCartState
+  title="Sign in to see your cart."
+  description="Your cart is connected to your account, so you need to sign in before reviewing your movies."
+  showSignIn
+/>
         </section>
       </main>
     );
@@ -244,3 +249,4 @@ export default async function CartPage() {
     </main>
   );
 }
+ 
