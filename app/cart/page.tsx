@@ -66,16 +66,13 @@ return cart.items.map((item) => {
 }
 
 // message used when cart has nothing to show
-// showSignIn is only true when user is not signed in
 
 function EmptyCartState({
   title,
   description,
-  showSignIn = false,
 }: {
   title: string;
   description: string;
-  showSignIn?: boolean;
 }) {
   return (
     <div className="mt-10 rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center">
@@ -93,14 +90,12 @@ function EmptyCartState({
           Browse movies
         </Link>
 
-        {showSignIn && (
-          <Link
-            href="/sign-in"
-            className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
-          >
-            Sign in
-          </Link>
-        )}
+        <Link
+          href="/sign-in"
+          className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
+        >
+          Sign in
+        </Link>
       </div>
     </div>
   );
@@ -124,11 +119,10 @@ export default async function CartPage() {
             Your cart
           </h1>
 
-<EmptyCartState
-  title="Sign in to see your cart."
-  description="Your cart is connected to your account, so you need to sign in before reviewing your movies."
-  showSignIn
-/>
+          <EmptyCartState
+            title="Sign in to see your cart."
+            description="Your cart is connected to your account, so you need to sign in before reviewing your movies."
+          />
         </section>
       </main>
     );
@@ -167,10 +161,10 @@ export default async function CartPage() {
         </div>
 
         {cartItems.length === 0 ? (
-<EmptyCartState
-  title="Your cart is empty."
-  description="You have not added any movies yet. Browse the movie catalog and choose something good."
-/>
+          <EmptyCartState
+            title="Your cart is empty."
+            description="You have not added any movies yet. Browse the movie catalog and choose something good."
+          />
         ) : (
           <div className="mt-10 space-y-6">
             <div className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900">
