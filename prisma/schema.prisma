@@ -43,6 +43,12 @@ model Movie {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  // deletedAt Boolean @default(false)
+
+  // Implement deletedAt as a boolean (with some further details probably) to add a soft delete of movie.
+  // This should simply flip the value to true if deleted, so the movie still exists in the DB instead of hard-delete.
+  // When querying for movies, if deletedAt is true, the movie should not be available.
+  // HOWEVER, If a movie has no previous history of connection to any order, the movie should be possible to delete completely.
 
   @@unique([title, releaseDate])
 }

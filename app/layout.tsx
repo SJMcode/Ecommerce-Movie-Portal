@@ -75,7 +75,7 @@ export default async function RootLayout({
                   Cart
                 </Link>
 
-                <Link href="/dashboard" className="transition hover:text-white">
+                <Link href="/user-dashboard" className="transition hover:text-white">
                   Dashboard
                 </Link>
 
@@ -83,7 +83,7 @@ export default async function RootLayout({
                   // user is logged in
                   <>
                     <Link
-                      href="/create"
+                      href="/movies/create"
                       className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
                     >
                       Create movie
