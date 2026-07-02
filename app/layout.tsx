@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Toaster } from "sonner";
+import { prisma } from "@/lib/prisma";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,6 +29,19 @@ export default async function RootLayout({
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+
+  const currentUser = session
+    ? await prisma.user.findUnique({
+        where: {
+          id: session.user.id,
+        },
+        select: {
+          role: true,
+        },
+      })
+    : null;
+
+  const isAdmin = currentUser?.role === "admin";
 
   return (
     <html
@@ -82,12 +96,14 @@ export default async function RootLayout({
                 {session ? (
                   // user is logged in
                   <>
-                    <Link
-                      href="/movies/create"
-                      className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
-                    >
-                      Create movie
-                    </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/movies/create"
+                        className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
+                      >
+                        Create movie
+                      </Link>
+                    )}
 
                     <SignOutButton
                       variant="ghost"
