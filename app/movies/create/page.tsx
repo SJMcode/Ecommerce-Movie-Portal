@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { CreateMovieForm } from "./_components/create-movie-form"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
+import { prisma } from "@/lib/prisma"
 
 export default async function CreateMoviePage() {
     const session = await auth.api.getSession({
@@ -10,6 +11,19 @@ export default async function CreateMoviePage() {
 
     if (!session) {
         redirect("/sign-in")
+    }
+
+    const currentUser = await prisma.user.findUnique({
+        where: {
+            id: session.user.id,
+        },
+        select: {
+            role: true,
+        },
+    })
+
+    if (currentUser?.role !== "admin") {
+        redirect("/")
     }
 
     return (
