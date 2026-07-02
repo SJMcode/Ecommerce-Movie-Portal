@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { DeleteMovieButton } from "./_components/delete-movie-button";
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 
 // movie detail page
 // customer can see more information about one movie here
@@ -111,16 +112,16 @@ async function getMovie(movieId: string): Promise<MovieDetails | null> {
 // add to cart button
 // button exists here because BL 03.03 asks for it
 // real cart behavior belongs to BL 04
-function AddToCartButton() {
-  return (
-    <button
-      type="button"
-      className="w-full rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600 sm:w-auto"
-    >
-      Add to cart
-    </button>
-  );
-}
+// function AddToCartButton() {
+//   return (
+//     <button
+//       type="button"
+//       className="w-full rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600 sm:w-auto"
+//     >
+//       Add to cart
+//     </button>
+//   );
+// }
 
 // small info card
 function MovieInfoItem({
@@ -311,7 +312,12 @@ export default async function MovieDetailsPage({
                 </p>
               </div>
 
-              <AddToCartButton />
+<AddToCartButton
+  movieId={movie.id}
+  className="w-full rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+>
+  Add to cart
+</AddToCartButton>
             </div>
           </div>
         </div>
