@@ -352,7 +352,7 @@ function MovieCarouselSection({ section }: { section: MovieSection }) {
 
                     <AddToCartButton
                       movieId={movie.id}
-                      className="mt-4 w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="mt-4 w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-wait disabled:opacity-60"
                     >
                       Add to cart
                     </AddToCartButton>
