@@ -1,36 +1,32 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-
-// movies page
-// public catalog where customers browse available movies
-// users can search and filter movies here
-
-type MovieCardData = {
-  id: string;
-  title: string;
-  price: number;
-  releaseDate: number | string;
-  imageUrl?: string | null;
-  runtime?: number | null;
-  genre?: string | null;
-};
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { MovieFilters } from "./_components/movies-types";
+import {
+  hasActiveFilters,
+  MovieFiltersForm,
+} from "./_components/movie-search-filters-form";
+import { getSafeImageSrc, MovieCard } from "./_components/movie-card";
+import {
+  buildMoviesHref,
+  getMoviesPage,
+  getPaginationTokens,
+  PAGE_SIZE,
+  parsePage,
+} from "./_components/pagination-helpers-and-types";
 
 type GenreOption = {
   id: string;
   name: string;
 };
-
-type MovieFilters = {
-  q: string;
-  genre: string;
-  fromYear?: number;
-  toYear?: number;
-};
-
-// use Prisma's own type from the current prisma client
-// this avoids guessing the exact generated import path
-type MovieFindManyArgs = NonNullable<Parameters<typeof prisma.movie.findMany>[0]>;
-type MovieWhereInput = NonNullable<MovieFindManyArgs["where"]>;
 
 // turn year from URL string into number
 // empty or invalid values become undefined
@@ -46,16 +42,6 @@ function parseYear(value?: string) {
   }
 
   return year;
-}
-
-// check if user is searching/filtering
-function hasActiveFilters(filters: MovieFilters) {
-  return Boolean(
-    filters.q ||
-      filters.genre ||
-      filters.fromYear !== undefined ||
-      filters.toYear !== undefined,
-  );
 }
 
 // get genres from DB for the genre dropdown
@@ -80,136 +66,6 @@ async function getGenres(): Promise<GenreOption[]> {
   }
 }
 
-// get movies from DB
-// q searches title, description, genre, director and cast
-// genre/fromYear/toYear are extra filters
-async function getMovies(filters: MovieFilters): Promise<MovieCardData[]> {
-  try {
-    const whereFilters: MovieWhereInput[] = [];
-
-    if (filters.q.length > 0) {
-      const textFilter = {
-        contains: filters.q,
-        mode: "insensitive" as const,
-      };
-
-      whereFilters.push({
-        OR: [
-          {
-            title: textFilter,
-          },
-          {
-            description: textFilter,
-          },
-          {
-            genres: {
-              some: {
-                genre: {
-                  name: textFilter,
-                },
-              },
-            },
-          },
-          {
-            directors: {
-              some: {
-                person: {
-                  name: textFilter,
-                },
-              },
-            },
-          },
-          {
-            cast: {
-              some: {
-                person: {
-                  name: textFilter,
-                },
-              },
-            },
-          },
-        ],
-      });
-    }
-
-    if (filters.genre.length > 0) {
-      whereFilters.push({
-        genres: {
-          some: {
-            genre: {
-              name: filters.genre,
-            },
-          },
-        },
-      });
-    }
-
-    if (filters.fromYear !== undefined) {
-      whereFilters.push({
-        releaseDate: {
-          gte: filters.fromYear,
-        },
-      });
-    }
-
-    if (filters.toYear !== undefined) {
-      whereFilters.push({
-        releaseDate: {
-          lte: filters.toYear,
-        },
-      });
-    }
-
-    const movies = await prisma.movie.findMany({
-      where:
-        whereFilters.length > 0
-          ? {
-              AND: whereFilters,
-            }
-          : undefined,
-      orderBy: {
-        title: "asc",
-      },
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        releaseDate: true,
-        imageUrl: true,
-        runtime: true,
-
-        // Movie.genres is MovieGenre[]
-        // show first genre on card
-        genres: {
-          select: {
-            genre: {
-              select: {
-                name: true,
-              },
-            },
-          },
-          take: 1,
-        },
-      },
-    });
-
-    return movies.map((movie) => ({
-      id: movie.id,
-      title: movie.title,
-      price: Number(movie.price),
-      releaseDate: movie.releaseDate,
-      imageUrl: movie.imageUrl,
-      runtime: movie.runtime,
-      genre: movie.genres[0]?.genre.name ?? null,
-    }));
-  } catch (error) {
-    // DB not answering
-    // nothing to show, but page should not die
-    console.error("Movies page DB error:", error);
-    return [];
-  }
-}
-
 // empty message
 // used when DB has no movies or filters have no matches
 function EmptyState({
@@ -228,145 +84,6 @@ function EmptyState({
   );
 }
 
-// movie filters
-// normal GET form, so the URL becomes /movies?q=matrix&genre=Action
-function MovieFiltersForm({
-  filters,
-  genres,
-}: {
-  filters: MovieFilters;
-  genres: GenreOption[];
-}) {
-  return (
-    <form
-      action="/movies"
-      method="GET"
-      className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
-    >
-      <div className="grid gap-3 lg:grid-cols-[1fr_180px_130px_130px_auto]">
-        <input
-          type="search"
-          name="q"
-          defaultValue={filters.q}
-          placeholder="Search title, director, cast, genre..."
-          className="min-h-11 rounded-full border border-zinc-700 bg-zinc-950 px-4 text-sm text-zinc-50 outline-none transition placeholder:text-zinc-500 focus:border-red-500"
-        />
-
-<div className="relative">
-  <select
-    name="genre"
-    defaultValue={filters.genre}
-    aria-label="Genre"
-    className="min-h-11 w-full appearance-none rounded-full border border-zinc-700 bg-zinc-950 px-4 pr-12 text-sm text-zinc-50 outline-none transition focus:border-red-500"
-  >
-    <option value="">All genres</option>
-
-    {genres.map((genre) => (
-      <option key={genre.id} value={genre.name}>
-        {genre.name}
-      </option>
-    ))}
-  </select>
-
-  {/* custom select arrow */}
-  {/* appearance-none removes browser arrow, this one is ours */}
-  <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400">
-    ▾
-  </span>
-</div>
-
-<input
-  type="text"
-  inputMode="numeric"
-  name="fromYear"
-  defaultValue={filters.fromYear ?? ""}
-  placeholder="From year"
-  className="min-h-11 rounded-full border border-zinc-700 bg-zinc-950 px-4 text-sm text-zinc-50 outline-none transition placeholder:text-zinc-500 focus:border-red-500"
-/>
-
-<input
-  type="text"
-  inputMode="numeric"
-  name="toYear"
-  defaultValue={filters.toYear ?? ""}
-  placeholder="To year"
-  className="min-h-11 rounded-full border border-zinc-700 bg-zinc-950 px-4 text-sm text-zinc-50 outline-none transition placeholder:text-zinc-500 focus:border-red-500"
-/>
-
-        <button
-          type="submit"
-          className="min-h-11 rounded-full bg-red-500 px-6 text-sm font-semibold text-white transition hover:bg-red-600"
-        >
-          Search
-        </button>
-      </div>
-
-      {hasActiveFilters(filters) && (
-        <div className="mt-4">
-          <Link
-            href="/movies"
-            className="text-sm font-semibold text-red-400 transition hover:text-red-300"
-          >
-            Clear search and filters
-          </Link>
-        </div>
-      )}
-    </form>
-  );
-}
-
-// one movie card
-// clicking it opens movie details
-function MovieCard({ movie }: { movie: MovieCardData }) {
-  return (
-    <Link
-      href={`/movies/${movie.id}`}
-      className="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition hover:-translate-y-1 hover:border-red-500/60 hover:bg-zinc-800/70"
-    >
-      <div
-        className="flex aspect-[2/3] items-center justify-center rounded-xl bg-cover bg-center text-center"
-        // movie image
-        // if DB has imageUrl, show it clear
-        // if not, show dark card with title
-        style={{
-          backgroundImage: movie.imageUrl
-            ? `url(${movie.imageUrl})`
-            : "linear-gradient(to bottom right, #27272a, #09090b)",
-        }}
-      >
-        {!movie.imageUrl && (
-          <span className="px-3 text-sm font-semibold text-zinc-300">
-            {movie.title}
-          </span>
-        )}
-      </div>
-
-      <div className="mt-4 space-y-2">
-        <h2 className="line-clamp-2 text-base font-semibold text-zinc-50 group-hover:text-red-300">
-          {movie.title}
-        </h2>
-
-        <p className="text-xs text-zinc-500">{movie.genre ?? "Genre TBA"}</p>
-
-        <div className="flex flex-col gap-1 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            {movie.releaseDate}
-            {movie.runtime ? ` · ${movie.runtime} min` : ""}
-          </span>
-
-          <span className="font-semibold text-red-400">
-            {Number.isFinite(movie.price) ? `${movie.price} kr` : "Price TBA"}
-          </span>
-        </div>
-
-        <p className="pt-2 text-sm font-medium text-zinc-300 group-hover:text-white">
-          View details →
-        </p>
-      </div>
-    </Link>
-  );
-}
-
 export default async function MoviesPage({
   searchParams,
 }: {
@@ -375,12 +92,12 @@ export default async function MoviesPage({
     genre?: string;
     fromYear?: string;
     toYear?: string;
+    page?: string;
   }>;
 }) {
   const params = await searchParams;
 
-  // filters come from URL
-  // example: /movies?q=nolan&genre=Action&fromYear=2000
+  // Keep existing filter parsing from URL query params.
   const filters: MovieFilters = {
     q: params.q?.trim() ?? "",
     genre: params.genre?.trim() ?? "",
@@ -388,12 +105,18 @@ export default async function MoviesPage({
     toYear: parseYear(params.toYear),
   };
 
-  const [movies, genres] = await Promise.all([
-    getMovies(filters),
-    getGenres(),
-  ]);
+  // Read the current page from URL (invalid/missing values become page 1).
+  const requestedPage = parsePage(params.page);
+
+  // Load paginated movies and dropdown genres in parallel for faster SSR.
+  const [{ movies, totalCount, currentPage, totalPages }, genres] =
+    await Promise.all([getMoviesPage(filters, requestedPage), getGenres()]);
 
   const isFiltering = hasActiveFilters(filters);
+
+  // Human-friendly range text: "Showing 1-30 of 31".
+  const from = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const to = Math.min(currentPage * PAGE_SIZE, totalCount);
 
   return (
     <main className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-50 sm:px-6 sm:py-16 lg:px-8">
@@ -425,12 +148,14 @@ export default async function MoviesPage({
 
         {isFiltering && (
           <p className="mt-6 text-sm text-zinc-400">
-            Showing {movies.length} result{movies.length === 1 ? "" : "s"} from
-            your current search and filters.
+            Showing {from}-{to} of {totalCount} result
+            {totalCount === 1 ? "" : "s"}
+            {isFiltering ? " for your current search and filters." : "."}
           </p>
         )}
 
         <div className="mt-8">
+          {/* Main content area: either empty state or current page of cards. */}
           {movies.length === 0 ? (
             isFiltering ? (
               <EmptyState
@@ -444,10 +169,71 @@ export default async function MoviesPage({
               />
             )
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6">
               {movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard
+                  key={movie.id}
+                  movie={movie}
+                  posterSrc={getSafeImageSrc(movie.imageUrl)}
+                />
               ))}
+            </div>
+          )}
+
+          {/* Pagination appears only when there is more than one page. */}
+          {totalPages > 1 && (
+            <div className="mt-8">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href={buildMoviesHref(
+                        filters,
+                        Math.max(1, currentPage - 1),
+                      )}
+                      aria-disabled={currentPage === 1}
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
+                    />
+                  </PaginationItem>
+
+                  {getPaginationTokens(currentPage, totalPages).map(
+                    (token, index) =>
+                      token === "ellipsis" ? (
+                        <PaginationItem key={`ellipsis-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={token}>
+                          <PaginationLink
+                            href={buildMoviesHref(filters, token)}
+                            isActive={token === currentPage}
+                          >
+                            {token}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href={buildMoviesHref(
+                        filters,
+                        Math.min(totalPages, currentPage + 1),
+                      )}
+                      aria-disabled={currentPage === totalPages}
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </div>

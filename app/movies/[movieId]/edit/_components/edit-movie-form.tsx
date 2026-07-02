@@ -78,6 +78,7 @@ const formSchema = z.object({
     .refine((v) => v > 0, "Price must be greater than 0"),
   releaseDate: z
     .string()
+    .min(1, "Please specify a release year (4 digits)")
     .transform(Number)
     .refine((v) => !isNaN(v), "Year must be a number")
     .refine(
@@ -248,7 +249,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="title">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -271,7 +273,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="description">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -295,7 +298,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="price">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -319,7 +323,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="releaseDate">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -343,7 +348,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="imageUrl">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -366,7 +372,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="stock">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -390,7 +397,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="runtime">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -414,7 +422,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="genres">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -564,7 +573,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="directors">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -708,7 +718,8 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
         <form.Field name="cast">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -779,62 +790,62 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
                                 <PersonHoverCard person={peopleById[item]} />
                               </HoverCard>
                               <div className="flex gap-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size={"icon-lg"}
-                                onPointerDown={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setEditingPerson(person);
-                                  setIsEditPersonOpen(true);
-                                }}
-                              >
-                                <Edit />
-                              </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size={"icon-lg"}
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setEditingPerson(person);
+                                    setIsEditPersonOpen(true);
+                                  }}
+                                >
+                                  <Edit />
+                                </Button>
 
-                              <Button
-                                type="button"
-                                size={"icon-lg"}
-                                variant="destructive"
-                                onClick={async (e) => {
-                                  e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
-                                  const confirmDelete = window.confirm(
-                                    `Are you sure you wish to delete ${peopleLabelMap[item]}? This will also remove them from any connected movies.`,
-                                  );
-                                  if (confirmDelete) {
-                                    const deletedPerson =
-                                      await deletePersonById(item);
-                                    const updateList = await getPeople();
-                                    setPeople(updateList);
-                                    field.handleChange(
-                                      Array.from(
-                                        new Set(
-                                          field.state.value.filter(
-                                            (id) => id !== item,
+                                <Button
+                                  type="button"
+                                  size={"icon-lg"}
+                                  variant="destructive"
+                                  onClick={async (e) => {
+                                    e.stopPropagation(); // Prevents the click on the icon from selecting the item in the list
+                                    const confirmDelete = window.confirm(
+                                      `Are you sure you wish to delete ${peopleLabelMap[item]}? This will also remove them from any connected movies.`,
+                                    );
+                                    if (confirmDelete) {
+                                      const deletedPerson =
+                                        await deletePersonById(item);
+                                      const updateList = await getPeople();
+                                      setPeople(updateList);
+                                      field.handleChange(
+                                        Array.from(
+                                          new Set(
+                                            field.state.value.filter(
+                                              (id) => id !== item,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                    form.setFieldValue(
-                                      "cast",
-                                      form.state.values.cast.filter(
-                                        (id) => id !== item,
-                                      ),
-                                    );
-                                    toast.success(
-                                      `${peopleLabelMap[item]} was successfully deleted.`,
-                                    );
-                                    return deletedPerson;
-                                  }
-                                }}
-                              >
-                                <Trash />
-                              </Button>
+                                      );
+                                      form.setFieldValue(
+                                        "cast",
+                                        form.state.values.cast.filter(
+                                          (id) => id !== item,
+                                        ),
+                                      );
+                                      toast.success(
+                                        `${peopleLabelMap[item]} was successfully deleted.`,
+                                      );
+                                      return deletedPerson;
+                                    }
+                                  }}
+                                >
+                                  <Trash />
+                                </Button>
                               </div>
                             </div>
                           </ComboboxItem>
