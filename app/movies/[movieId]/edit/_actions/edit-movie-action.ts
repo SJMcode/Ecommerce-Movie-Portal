@@ -18,6 +18,9 @@ const firstMovieYear = 1888;
 // Look into using this for numbers when time:
 // ----> z.coerce.number<number>()
 
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
 const editMovieSchema = z.object({
   title: z
     .string()
@@ -41,6 +44,23 @@ const editMovieSchema = z.object({
 });
 
 async function editMovie(values: EditMovieInput): Promise<EditMovieResult> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  if (currentUser?.role !== "admin") {
+    return { ok: false, error: "Forbidden: Admins only" };
+  }
+
   const data = editMovieSchema.parse(values);
 
   const checkForDuplicate = await prisma.movie.findFirst({
