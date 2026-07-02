@@ -1,9 +1,8 @@
-import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 
 // hero image
 // w x h = width x height
@@ -14,7 +13,7 @@ const heroImageUrl =
 // not the whole Movie model
 // only what we need to draw one movie card
 type MoviePreview = {
-  id?: string;
+  id: string;
   title: string;
   year: number | string;
   price: number;
@@ -56,52 +55,6 @@ const emptyMovieSections: MovieSection[] = [
     movies: [],
   },
 ];
-
-// add to cart action
-// cart is saved in cookie as { movieId: quantity }
-// example: { "movie-123": 2 }
-async function addToCart(formData: FormData) {
-  "use server";
-
-  // take movie id from hidden input
-  const movieId = formData.get("movieId");
-
-  // no movie id = nothing to add
-  if (typeof movieId !== "string" || movieId.length === 0) {
-    return;
-  }
-
-  // get cart cookie
-  const cookieStore = await cookies();
-  const currentCartValue = cookieStore.get("cart")?.value;
-
-  // cart starts empty
-  let cart: Record<string, number> = {};
-
-  // read old cart
-  // if cookie is broken, empty cart instead of crash
-  try {
-    cart = currentCartValue ? JSON.parse(currentCartValue) : {};
-  } catch {
-    cart = {};
-  }
-
-  // if movie exists in cart, add 1
-  // else create first quantity
-  cart[movieId] = (cart[movieId] ?? 0) + 1;
-
-  // save cart again
-  cookieStore.set("cart", JSON.stringify(cart), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-
-  // refresh home after cart update
-  revalidatePath("/");
-}
 
 // turns DB movie into landing page movie
 // DB can have more fields, but card only needs these
@@ -347,19 +300,16 @@ function MovieCarouselSection({ section }: { section: MovieSection }) {
             <div className="movie-carousel-track flex gap-5 py-2">
               {carouselMovies.map((movie, index) => {
                 // real DB movies go to /movies/[id]
-                const movieHref = movie.id ? `/movies/${movie.id}` : "/movies";
-
-                // cart needs DB movie id
-                const canAddToCart = Boolean(movie.id);
+                const movieHref = `/movies/${movie.id}`;
 
                 return (
                   <article
-                    key={`${section.title}-${movie.id ?? movie.title}-${index}`}
+                    key={`${section.title}-${movie.id}-${index}`}
                     className="w-[268px] shrink-0 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition hover:-translate-y-1 hover:border-red-500/60 hover:bg-zinc-800/70 sm:p-5"
                   >
                     <Link href={movieHref} className="block">
                       <div
-                        className="mb-4 flex aspect-2/3 items-center justify-center rounded-xl bg-cover bg-center text-center"
+                        className="mb-4 flex aspect-[2/3] items-center justify-center rounded-xl bg-cover bg-center text-center"
                         // movie image
                         // if DB has imageUrl, show image
                         // if not, show dark card with title
@@ -400,25 +350,12 @@ function MovieCarouselSection({ section }: { section: MovieSection }) {
                       </div>
                     </Link>
 
-                    {canAddToCart ? (
-                      // cart button
-                      // hidden input sends movie id to server action
-                      <form action={addToCart} className="mt-4">
-                        <input type="hidden" name="movieId" value={movie.id} />
-
-                        <button
-                          type="submit"
-                          className="w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
-                        >
-                          Add to cart
-                        </button>
-                      </form>
-                    ) : (
-                      // nothing real to add
-                      <div className="mt-4 rounded-full border border-zinc-800 px-4 py-2 text-center text-sm text-zinc-500">
-                        No cart item yet.
-                      </div>
-                    )}
+                    <AddToCartButton
+                      movieId={movie.id}
+                      className="mt-4 w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Add to cart
+                    </AddToCartButton>
                   </article>
                 );
               })}
@@ -457,9 +394,11 @@ function Footer() {
 // async because it reads from Prisma before rendering
 export default async function Home() {
   const movieSections = await getLandingMovieSections();
+
   const session = await auth.api.getSession({
-  headers: await headers(),
-});
+    headers: await headers(),
+  });
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <section
@@ -496,21 +435,21 @@ export default async function Home() {
               Browse all movies
             </Link>
 
-{session ? (
-  <Link
-    href="/cart"
-    className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
-  >
-    Go to cart
-  </Link>
-) : (
-  <Link
-    href="/sign-in"
-    className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
-  >
-    Sign in
-  </Link>
-)}
+            {session ? (
+              <Link
+                href="/cart"
+                className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
+              >
+                Go to cart
+              </Link>
+            ) : (
+              <Link
+                href="/sign-in"
+                className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-500"
+              >
+                Sign in
+              </Link>
+            )}
           </div>
         </div>
       </section>
