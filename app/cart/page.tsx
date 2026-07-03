@@ -1,73 +1,76 @@
-import Link from "next/link"
+import Link from "next/link";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { clearCart } from "./_actions/clear-cart-action";
+import { updateCartItemQuantity } from "./_actions/update-cart-quantity-action";
+import { removeCartItem } from "./_actions/remove-cart-item-action";
 
 type CartPageItem = {
-    id: string;
-    movieId: string;
-    title: string;
-    price: number;
-    quantity: number;
-    subtotal: number;
-}
+  id: string;
+  movieId: string;
+  title: string;
+  price: number;
+  quantity: number;
+  stock: number;
+  subtotal: number;
+};
 
-// format price for display   
-
+// format price for display
 function formatPrice(price: number) {
-    return `${price.toFixed(2)} kr`;
+  return `${price.toFixed(2)} kr`;
 }
 
 // get cart items for the signed-in user
-
 async function getCartItems(userId: string): Promise<CartPageItem[]> {
-    const cart = await prisma.cart.findUnique({
-        where: {
-            userId,
+  const cart = await prisma.cart.findUnique({
+    where: {
+      userId,
+    },
+    select: {
+      items: {
+        orderBy: {
+          createdAt: "asc",
         },
         select: {
-            items: {
-                orderBy: {
-                    createdAt: "asc",
-                },
-                select: {
-                    id: true,
-                    quantity: true,
-                    movie: {
-                        select: {
-                            id: true,
-                            title: true,
-                            price: true,
-                        },
-                    },
-                },
+          id: true,
+          quantity: true,
+          movie: {
+            select: {
+              id: true,
+              title: true,
+              price: true,
+              stock: true,
             },
+          },
         },
-    });
+      },
+    },
+  });
 
-// user has no cart yet
-if(!cart) {
-    return[];
-}
+  // user has no cart yet
+  if (!cart) {
+    return [];
+  }
 
-return cart.items.map((item) => {
+  return cart.items.map((item) => {
     const price = Number(item.movie.price);
     const safePrice = Number.isFinite(price) ? price : 0;
 
     return {
-        id: item.id,
-        movieId: item.movie.id,
-        title: item.movie.title,
-        price: safePrice,
-        quantity: item.quantity,
-        subtotal: safePrice * item.quantity,
+      id: item.id,
+      movieId: item.movie.id,
+      title: item.movie.title,
+      price: safePrice,
+      quantity: item.quantity,
+      stock: item.movie.stock,
+      subtotal: safePrice * item.quantity,
     };
-});
+  });
 }
 
 // message used when cart has nothing to show
 // showSignIn is only true when user is not signed in
-
 function EmptyCartState({
   title,
   description,
@@ -111,7 +114,7 @@ export default async function CartPage() {
     headers: await headers(),
   });
 
- // cart belongs to a user, so signed out users cannot have a personal cart here
+  // cart belongs to a user, so signed out users cannot have a personal cart here
   if (!session?.user?.id) {
     return (
       <main className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-50 sm:px-6 sm:py-16 lg:px-8">
@@ -124,11 +127,11 @@ export default async function CartPage() {
             Your cart
           </h1>
 
-<EmptyCartState
-  title="Sign in to see your cart."
-  description="Your cart is connected to your account, so you need to sign in before reviewing your movies."
-  showSignIn
-/>
+          <EmptyCartState
+            title="Sign in to see your cart."
+            description="Your cart is connected to your account, so you need to sign in before reviewing your movies."
+            showSignIn
+          />
         </section>
       </main>
     );
@@ -167,14 +170,14 @@ export default async function CartPage() {
         </div>
 
         {cartItems.length === 0 ? (
-<EmptyCartState
-  title="Your cart is empty."
-  description="You have not added any movies yet. Browse the movie catalog and choose something good."
-/>
+          <EmptyCartState
+            title="Your cart is empty."
+            description="You have not added any movies yet. Browse the movie catalog and choose something good."
+          />
         ) : (
           <div className="mt-10 space-y-6">
             <div className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900">
-              <div className="hidden grid-cols-[1fr_120px_120px_120px] gap-4 border-b border-zinc-800 px-6 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 md:grid">
+              <div className="hidden grid-cols-[1fr_120px_170px_150px] gap-4 border-b border-zinc-800 px-6 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 md:grid">
                 <p>Movie</p>
                 <p className="text-right">Price</p>
                 <p className="text-right">Quantity</p>
@@ -185,7 +188,7 @@ export default async function CartPage() {
                 {cartItems.map((item) => (
                   <div
                     key={item.id}
-                    className="grid gap-4 px-6 py-5 md:grid-cols-[1fr_120px_120px_120px] md:items-center"
+                    className="grid gap-4 px-6 py-5 md:grid-cols-[1fr_120px_170px_150px] md:items-center"
                   >
                     <div>
                       <Link
@@ -203,29 +206,106 @@ export default async function CartPage() {
                       </span>
                     </div>
 
-                    <div className="flex justify-between text-sm md:block md:text-right">
+                    <div className="flex items-center justify-between gap-4 text-sm md:justify-end">
                       <span className="text-zinc-500 md:hidden">Quantity</span>
-                      <span className="text-zinc-100">{item.quantity}</span>
+
+                      <div className="inline-flex items-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-950">
+                        <form action={updateCartItemQuantity}>
+                          <input
+                            type="hidden"
+                            name="cartItemId"
+                            value={item.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="quantity"
+                            value={Math.max(1, item.quantity - 1)}
+                          />
+
+                          <button
+                            type="submit"
+                            disabled={item.quantity <= 1}
+                            aria-label={`Decrease quantity for ${item.title}`}
+                            className="h-9 w-9 text-lg font-bold text-zinc-100 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:text-zinc-600"
+                          >
+                            -
+                          </button>
+                        </form>
+
+                        <span className="min-w-10 px-3 text-center text-sm font-semibold text-zinc-100">
+                          {item.quantity}
+                        </span>
+
+                        <form action={updateCartItemQuantity}>
+                          <input
+                            type="hidden"
+                            name="cartItemId"
+                            value={item.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="quantity"
+                            value={Math.min(item.stock, item.quantity + 1)}
+                          />
+
+                          <button
+                            type="submit"
+                            disabled={item.quantity >= item.stock}
+                            aria-label={`Increase quantity for ${item.title}`}
+                            className="h-9 w-9 text-lg font-bold text-zinc-100 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:text-zinc-600"
+                          >
+                            +
+                          </button>
+                        </form>
+                      </div>
                     </div>
 
-                    <div className="flex justify-between text-sm font-semibold md:block md:text-right">
-                      <span className="text-zinc-500 md:hidden">Subtotal</span>
-                      <span className="text-zinc-100">
-                        {formatPrice(item.subtotal)}
-                      </span>
-                    </div>
+<div className="flex items-center justify-between gap-3 text-sm font-semibold md:justify-end">
+  <span className="text-zinc-500 md:hidden">Subtotal</span>
+
+  <div className="flex items-center gap-3">
+    <span className="text-zinc-100">
+      {formatPrice(item.subtotal)}
+    </span>
+
+    <form action={removeCartItem}>
+      <input type="hidden" name="cartItemId" value={item.id} />
+
+      <button
+        type="submit"
+        aria-label={`Remove ${item.title} from cart`}
+        title={`Remove ${item.title}`}
+        className="rounded-full border border-zinc-700 px-3 py-2 text-xs transition hover:border-red-500 hover:text-red-300"
+      >
+        🗑️
+      </button>
+    </form>
+  </div>
+</div>
                   </div>
                 ))}
               </div>
             </div>
-
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-lg font-semibold text-zinc-100">Total</p>
 
-                <p className="text-2xl font-bold text-zinc-50">
-                  {formatPrice(cartTotal)}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-2xl font-bold text-zinc-50">
+                    {formatPrice(cartTotal)}
+                  </p>
+
+                  <form action={clearCart}>
+                    <button
+                      type="submit"
+                      aria-label="Clear whole cart"
+                      title="Clear whole cart"
+                      className="rounded-full border border-zinc-700 px-3 py-2 text-sm transition hover:border-red-500 hover:text-red-300"
+                    >
+                      🗑️
+                    </button>
+                  </form>
+                </div>
               </div>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
