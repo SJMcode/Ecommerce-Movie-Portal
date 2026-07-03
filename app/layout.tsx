@@ -8,7 +8,7 @@ import { headers } from "next/headers";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Toaster } from "sonner";
 import { prisma } from "@/lib/prisma";
-import { Menu } from "lucide-react";
+import { Menu, ShoppingCart } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,12 +43,16 @@ export default async function RootLayout({
           id: session.user.id,
         },
         select: {
+          name: true,
+          image: true,
+          email: true,
           role: true,
         },
       })
     : null;
 
   const isAdmin = currentUser?.role === "admin";
+  const avatarUrl = currentUser?.image || (currentUser ? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(currentUser.name)}` : "");
 
   const cartQuantityResult = session?.user?.id
     ? await prisma.cartItem.aggregate({
@@ -107,35 +111,59 @@ export default async function RootLayout({
                   Movies
                 </Link>
 
-                <Link href="/cart" className="transition hover:text-white">
-                  {cartLabel}
+                <Link href="/cart" className="relative transition hover:text-white p-1" aria-label="Shopping Cart">
+                  <ShoppingCart className="h-5 w-5" />
+                  {cartQuantity > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-1 ring-zinc-950">
+                      {cartQuantity}
+                    </span>
+                  )}
                 </Link>
 
-                <Link
-                  href="/user-dashboard"
-                  className="transition hover:text-white"
-                >
-                  Dashboard
-                </Link>
-
-                {session ? (
-                  <>
-                    {isAdmin && (
-                      <Link
-                        href="/movies/create"
-                        className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
-                      >
-                        Create movie
-                      </Link>
-                    )}
-
-                    <SignOutButton
-                      variant="ghost"
-                      className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
+                {session && currentUser ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="relative h-8 w-8 rounded-full overflow-hidden focus:outline-none ring-2 ring-red-500/20 hover:ring-red-500/50 transition shrink-0 cursor-pointer">
+                        <img
+                          src={avatarUrl}
+                          alt={currentUser.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-56 border-zinc-800 bg-zinc-950 text-zinc-100"
                     >
-                      Sign Out
-                    </SignOutButton>
-                  </>
+                      <div className="flex flex-col px-2 py-1.5 text-xs text-zinc-400 border-b border-zinc-800/60 pb-2 mb-1">
+                        <span className="font-semibold text-zinc-200">{currentUser.name}</span>
+                        <span className="truncate text-zinc-400">{currentUser.email}</span>
+                      </div>
+
+                      <DropdownMenuItem asChild>
+                        <Link href="/user-dashboard">Dashboard</Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem asChild>
+                        <Link href="/user-dashboard/profile">Profile</Link>
+                      </DropdownMenuItem>
+
+                      {isAdmin && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/movies/create">Create movie</Link>
+                        </DropdownMenuItem>
+                      )}
+
+                      <div className="border-t border-zinc-800/60 mt-1 pt-1">
+                        <SignOutButton
+                          variant="ghost"
+                          className="h-9 w-full justify-start px-2 text-zinc-100 hover:bg-zinc-800 hover:text-white font-normal"
+                        >
+                          Sign Out
+                        </SignOutButton>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : (
                   <>
                     <Link
@@ -181,7 +209,10 @@ export default async function RootLayout({
                     </DropdownMenuItem>
 
                     <DropdownMenuItem asChild>
-                      <Link href="/cart">{cartLabel}</Link>
+                      <Link href="/cart" className="flex items-center gap-2">
+                        <ShoppingCart className="h-4 w-4" />
+                        Cart {cartQuantity > 0 && `(${cartQuantity})`}
+                      </Link>
                     </DropdownMenuItem>
 
                     <DropdownMenuItem asChild>
@@ -190,6 +221,10 @@ export default async function RootLayout({
 
                     {session ? (
                       <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/user-dashboard/profile">Profile</Link>
+                        </DropdownMenuItem>
+
                         {isAdmin && (
                           <DropdownMenuItem asChild>
                             <Link href="/movies/create">Create movie</Link>
