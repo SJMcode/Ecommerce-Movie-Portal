@@ -53,7 +53,7 @@ const formSchema = z.object({
     .max(40, "Title cannot be longer than 40 characters"),
   description: z
     .string()
-    .max(500, "Content cannot be longer than 250 characters"),
+    .max(500, "Content cannot be longer than 500 characters"),
   price: z
     .string()
     .min(1, "Price is required")
@@ -62,6 +62,7 @@ const formSchema = z.object({
     .refine((v) => v > 0, "Price must be greater than 0"),
   releaseDate: z
     .string()
+    .min(1, "Please specify a release year (4 digits)")
     .transform(Number)
     .refine((v) => !isNaN(v), "Year must be a number")
     .refine(
@@ -205,6 +206,7 @@ function CreateMovieForm() {
       cast: [] as string[],
     },
     validators: {
+      onChange: formSchema,
       onSubmit: formSchema,
     },
     onSubmit: async ({ value }) => {
@@ -231,7 +233,8 @@ function CreateMovieForm() {
         <form.Field name="title">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -254,7 +257,8 @@ function CreateMovieForm() {
         <form.Field name="description">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -278,7 +282,8 @@ function CreateMovieForm() {
         <form.Field name="price">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -302,7 +307,8 @@ function CreateMovieForm() {
         <form.Field name="releaseDate">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -326,7 +332,8 @@ function CreateMovieForm() {
         <form.Field name="imageUrl">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -349,7 +356,8 @@ function CreateMovieForm() {
         <form.Field name="stock">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -373,7 +381,8 @@ function CreateMovieForm() {
         <form.Field name="runtime">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -397,7 +406,8 @@ function CreateMovieForm() {
         <form.Field name="genres">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -546,7 +556,8 @@ function CreateMovieForm() {
         <form.Field name="directors">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (
@@ -690,7 +701,8 @@ function CreateMovieForm() {
         <form.Field name="cast">
           {(field) => {
             const isInvalid =
-              (field.state.meta.isDirty || form.state.isSubmitted) &&
+              (field.state.meta.isTouched ||
+                form.state.submissionAttempts > 0) &&
               !field.state.meta.isValid;
 
             return (

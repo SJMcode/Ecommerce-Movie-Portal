@@ -27,6 +27,9 @@ const firstMovieYear = 1888;
 // Look into using this for numbers when time: 
 // ----> z.coerce.number<number>()
  
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
 const createMovieSchema = z.object({
   title: z
     .string()
@@ -52,6 +55,22 @@ const createMovieSchema = z.object({
 export async function createMovie(
   values: InputAsStrings,
 ): Promise<CreateMovieResult> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  if (currentUser?.role !== "admin") {
+    return { ok: false, error: "Forbidden: Admins only" };
+  }
 
   const data = createMovieSchema.parse(values);
 

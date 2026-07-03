@@ -15,6 +15,28 @@ type MovieCardData = {
   runtime?: number | null;
   genre?: string | null;
 };
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { MovieFilters } from "./_components/movies-types";
+import {
+  hasActiveFilters,
+  MovieFiltersForm,
+} from "./_components/movie-search-filters-form";
+import { getSafeImageSrc, MovieCard } from "./_components/movie-card";
+import {
+  buildMoviesHref,
+  getMoviesPage,
+  getPaginationTokens,
+  PAGE_SIZE,
+  parsePage,
+} from "./_components/pagination-helpers-and-types";
 
 type GenreOption = {
   id: string;
@@ -99,6 +121,11 @@ function parseSort(value?: string): MovieSort {
 
   if (value && allowedSorts.includes(value as MovieSort)) {
     return value as MovieSort;
+// turn year from URL string into number
+// empty or invalid values become undefined
+function parseYear(value?: string) {
+  if (!value) {
+    return undefined;
   }
 
   return defaultSort;
@@ -751,12 +778,16 @@ export default async function MoviesPage({
     actorId?: string;
     directorId?: string;
     sort?: string;
+    fromYear?: string;
+    toYear?: string;
+    page?: string;
   }>;
 }) {
   const params = await searchParams;
 
   // filters come from URL
   // example: /movies?q=nolan&genre=Action&sort=year-desc
+  // Keep existing filter parsing from URL query params.
   const filters: MovieFilters = {
     q: params.q?.trim() ?? "",
     genre: params.genre?.trim() ?? "",
@@ -771,8 +802,18 @@ export default async function MoviesPage({
     getActors(),
     getDirectors(),
   ]);
+  // Read the current page from URL (invalid/missing values become page 1).
+  const requestedPage = parsePage(params.page);
+
+  // Load paginated movies and dropdown genres in parallel for faster SSR.
+  const [{ movies, totalCount, currentPage, totalPages }, genres] =
+    await Promise.all([getMoviesPage(filters, requestedPage), getGenres()]);
 
   const isFiltering = hasActiveFilters(filters);
+
+  // Human-friendly range text: "Showing 1-30 of 31".
+  const from = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const to = Math.min(currentPage * PAGE_SIZE, totalCount);
 
   return (
     <main className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-50 sm:px-6 sm:py-16 lg:px-8">
@@ -815,10 +856,14 @@ export default async function MoviesPage({
           <p className="mt-6 text-sm text-zinc-400">
             Showing {movies.length} result{movies.length === 1 ? "" : "s"} from
             your current search, filters and sort.
+            Showing {from}-{to} of {totalCount} result
+            {totalCount === 1 ? "" : "s"}
+            {isFiltering ? " for your current search and filters." : "."}
           </p>
         )}
 
         <div className="mt-8">
+          {/* Main content area: either empty state or current page of cards. */}
           {movies.length === 0 ? (
             isFiltering ? (
               <EmptyState
@@ -832,10 +877,71 @@ export default async function MoviesPage({
               />
             )
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6">
               {movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard
+                  key={movie.id}
+                  movie={movie}
+                  posterSrc={getSafeImageSrc(movie.imageUrl)}
+                />
               ))}
+            </div>
+          )}
+
+          {/* Pagination appears only when there is more than one page. */}
+          {totalPages > 1 && (
+            <div className="mt-8">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href={buildMoviesHref(
+                        filters,
+                        Math.max(1, currentPage - 1),
+                      )}
+                      aria-disabled={currentPage === 1}
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
+                    />
+                  </PaginationItem>
+
+                  {getPaginationTokens(currentPage, totalPages).map(
+                    (token, index) =>
+                      token === "ellipsis" ? (
+                        <PaginationItem key={`ellipsis-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={token}>
+                          <PaginationLink
+                            href={buildMoviesHref(filters, token)}
+                            isActive={token === currentPage}
+                          >
+                            {token}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href={buildMoviesHref(
+                        filters,
+                        Math.min(totalPages, currentPage + 1),
+                      )}
+                      aria-disabled={currentPage === totalPages}
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </div>

@@ -24,6 +24,19 @@ async function EditMoviePage(props: PageProps<"/movies/[movieId]/edit">) {
     redirect("/sign-in")
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: {
+      id: session.user.id,
+    },
+    select: {
+      role: true,
+    },
+  });
+
+  if (currentUser?.role !== "admin") {
+    redirect("/");
+  }
+
   const movie = await prisma.movie.findUnique({
     where: { id: movieId },
     include: {

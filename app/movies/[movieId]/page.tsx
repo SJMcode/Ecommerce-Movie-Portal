@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -83,7 +83,7 @@ async function getMovie(movieId: string): Promise<MovieDetails | null> {
         imageUrl: true,
 
         // DB note:
-        // this assumes Movie has relation field movieGenres
+        // this assumes Movie has relation field genres
         // if Prisma screams, we adjust this relation name from schema
         genres: {
           select: {
@@ -108,20 +108,6 @@ async function getMovie(movieId: string): Promise<MovieDetails | null> {
     return null;
   }
 }
-
-// add to cart button
-// button exists here because BL 03.03 asks for it
-// real cart behavior belongs to BL 04
-// function AddToCartButton() {
-//   return (
-//     <button
-//       type="button"
-//       className="w-full rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600 sm:w-auto"
-//     >
-//       Add to cart
-//     </button>
-//   );
-// }
 
 // small info card
 function MovieInfoItem({
@@ -154,31 +140,31 @@ export default async function MovieDetailsPage({
     notFound();
   }
 
-  // Get session to check if user is signed in -> IF session found, edit movie button is enabled/visible
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    redirect("/sign-in");
-  }
-
-  // 2. Fetch the user's role from the database
-  const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
-  });
-
-  if (dbUser?.role !== "admin") {
-    redirect("/movies");
-  }
-
   const movie = await getMovie(movieId);
 
   // movie does not exist = not found
   if (!movie) {
     notFound();
   }
+
+  // session is only used to decide if admin buttons should show
+  // normal users should still be able to see movie details
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  const currentUser = session
+    ? await prisma.user.findUnique({
+        where: {
+          id: session.user.id,
+        },
+        select: {
+          role: true,
+        },
+      })
+    : null;
+
+  const isAdmin = currentUser?.role === "admin";
 
   return (
     <main className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-50 sm:px-6 sm:py-16 lg:px-8">
@@ -190,12 +176,13 @@ export default async function MovieDetailsPage({
           >
             ← Back
           </Link>
-          <div className="flex gap-2 items-center">
-            {session && (
+
+          <div className="flex items-center gap-2">
+            {isAdmin && (
               <>
                 <Button
                   type="button"
-                  size={"sm"}
+                  size="sm"
                   variant="default"
                   className="cursor-pointer"
                   asChild
@@ -211,22 +198,32 @@ export default async function MovieDetailsPage({
                     "use server";
 
                     // Re-verify session on action invocation
-                    const session = await auth.api.getSession({
+                    const actionSession = await auth.api.getSession({
                       headers: await headers(),
                     });
-                    if (!session) throw new Error("Unauthorized");
+
+                    if (!actionSession) {
+                      throw new Error("Unauthorized");
+                    }
 
                     // Re-verify user role in DB
-                    const dbUser = await prisma.user.findUnique({
-                      where: { id: session.user.id },
-                      select: { role: true },
+                    const actionUser = await prisma.user.findUnique({
+                      where: {
+                        id: actionSession.user.id,
+                      },
+                      select: {
+                        role: true,
+                      },
                     });
-                    if (dbUser?.role !== "admin") {
+
+                    if (actionUser?.role !== "admin") {
                       throw new Error("Forbidden: Admins only");
                     }
 
                     await prisma.movie.delete({
-                      where: { id: movie.id },
+                      where: {
+                        id: movie.id,
+                      },
                     });
                   }}
                 />
@@ -306,18 +303,18 @@ export default async function MovieDetailsPage({
                 <p className="font-semibold text-zinc-100">
                   Ready to add this movie?
                 </p>
+
                 <p className="mt-1 text-sm text-zinc-400">
-                  Cart functionality is connected in the cart and checkout
-                  workflow.
+                  Add it to your cart and continue shopping.
                 </p>
               </div>
 
-<AddToCartButton
-  movieId={movie.id}
-  className="w-full rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
->
-  Add to cart
-</AddToCartButton>
+              <AddToCartButton
+                movieId={movie.id}
+                className="w-full rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600 disabled:{isPending} disabled:opacity-60 sm:w-auto"
+              >
+                Add to cart
+              </AddToCartButton>
             </div>
           </div>
         </div>
