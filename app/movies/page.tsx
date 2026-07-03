@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import {
   Pagination,
   PaginationContent,
@@ -17,72 +16,15 @@ import {
 import { getSafeImageSrc, MovieCard } from "./_components/movie-card";
 import {
   buildMoviesHref,
+  getActors,
+  getDirectors,
+  getGenres,
   getMoviesPage,
   getPaginationTokens,
   PAGE_SIZE,
   parsePage,
+  parseSort,
 } from "./_components/pagination-helpers-and-types";
-
-type GenreOption = {
-  id: string;
-  name: string;
-};
-
-// turn year from URL string into number
-// empty or invalid values become undefined
-function parseYear(value?: string) {
-  if (!value) {
-    return undefined;
-  }
-
-  const year = Number(value);
-
-  if (!Number.isInteger(year)) {
-    return undefined;
-  }
-
-  return year;
-}
-
-// get genres from DB for the genre dropdown
-async function getGenres(): Promise<GenreOption[]> {
-  try {
-    const genres = await prisma.genre.findMany({
-      orderBy: {
-        name: "asc",
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-    });
-
-    return genres;
-  } catch (error) {
-    // DB not answering
-    // dropdown should not kill the page
-    console.error("Genres DB error:", error);
-    return [];
-  }
-}
-
-// empty message
-// used when DB has no movies or filters have no matches
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
-      <p className="text-lg font-semibold text-zinc-300">{title}</p>
-
-      <p className="mt-2 text-sm">{description}</p>
-    </div>
-  );
-}
 
 export default async function MoviesPage({
   searchParams,
@@ -90,31 +32,38 @@ export default async function MoviesPage({
   searchParams: Promise<{
     q?: string;
     genre?: string;
-    fromYear?: string;
-    toYear?: string;
+    actorId?: string;
+    directorId?: string;
+    sort?: string;
     page?: string;
   }>;
 }) {
   const params = await searchParams;
 
-  // Keep existing filter parsing from URL query params.
   const filters: MovieFilters = {
     q: params.q?.trim() ?? "",
     genre: params.genre?.trim() ?? "",
-    fromYear: parseYear(params.fromYear),
-    toYear: parseYear(params.toYear),
+    actorId: params.actorId?.trim() ?? "",
+    directorId: params.directorId?.trim() ?? "",
+    sort: parseSort(params.sort),
   };
 
-  // Read the current page from URL (invalid/missing values become page 1).
   const requestedPage = parsePage(params.page);
 
-  // Load paginated movies and dropdown genres in parallel for faster SSR.
-  const [{ movies, totalCount, currentPage, totalPages }, genres] =
-    await Promise.all([getMoviesPage(filters, requestedPage), getGenres()]);
+  const [
+    { movies, totalCount, currentPage, totalPages },
+    genres,
+    actors,
+    directors,
+  ] = await Promise.all([
+    getMoviesPage(filters, requestedPage),
+    getGenres(),
+    getActors(),
+    getDirectors(),
+  ]);
 
   const isFiltering = hasActiveFilters(filters);
 
-  // Human-friendly range text: "Showing 1-30 of 31".
   const from = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const to = Math.min(currentPage * PAGE_SIZE, totalCount);
 
@@ -131,8 +80,12 @@ export default async function MoviesPage({
               Browse movies
             </h1>
 
-            <p className="mt-4 text-sm leading-7 text-zinc-400 sm:text-base">
-              Search and filter the catalog by title, genre, people, or year.
+            <p
+              id="movie-filters"
+              className="mt-4 scroll-mt-24 text-sm leading-7 text-zinc-400 sm:text-base"
+            >
+              Smart search the catalog, sort results, or use advanced filters
+              for actors, directors and genres.
             </p>
           </div>
 
@@ -144,29 +97,44 @@ export default async function MoviesPage({
           </Link>
         </div>
 
-        <MovieFiltersForm filters={filters} genres={genres} />
+        <MovieFiltersForm
+          filters={filters}
+          genres={genres}
+          actors={actors}
+          directors={directors}
+        />
 
         {isFiltering && (
           <p className="mt-6 text-sm text-zinc-400">
             Showing {from}-{to} of {totalCount} result
-            {totalCount === 1 ? "" : "s"}
-            {isFiltering ? " for your current search and filters." : "."}
+            {totalCount === 1 ? "" : "s"} for your current search, filters and
+            sort.
           </p>
         )}
 
         <div className="mt-8">
-          {/* Main content area: either empty state or current page of cards. */}
           {movies.length === 0 ? (
             isFiltering ? (
-              <EmptyState
-                title="No movies found."
-                description="Try another title, genre, director, actor, or year range."
-              />
+              <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+                <p className="text-lg font-semibold text-zinc-300">
+                  No movies found.
+                </p>
+
+                <p className="mt-2 text-sm">
+                  Try another title, actor, director, genre, or sort option.
+                </p>
+              </div>
             ) : (
-              <EmptyState
-                title="No movies here yet."
-                description="Our database is currently being updated. Please come back soon!"
-              />
+              <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+                <p className="text-lg font-semibold text-zinc-300">
+                  No movies here yet.
+                </p>
+
+                <p className="mt-2 text-sm">
+                  Our database is currently being updated. Please come back
+                  soon!
+                </p>
+              </div>
             )
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6">
@@ -180,7 +148,6 @@ export default async function MoviesPage({
             </div>
           )}
 
-          {/* Pagination appears only when there is more than one page. */}
           {totalPages > 1 && (
             <div className="mt-8">
               <Pagination>
@@ -238,6 +205,13 @@ export default async function MoviesPage({
           )}
         </div>
       </section>
+
+      <a
+        href="#movie-filters"
+        className="fixed bottom-6 right-6 z-40 rounded-full border border-zinc-700 bg-zinc-900/95 px-4 py-3 text-sm font-semibold text-zinc-100 shadow-xl backdrop-blur transition hover:border-red-500 hover:text-red-300"
+      >
+        ↑ Filters
+      </a>
     </main>
   );
 }
