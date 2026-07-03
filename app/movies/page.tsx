@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { PersonCombobox } from "@/components/movies/person-combobox";
 
 // movies page
 // public catalog where customers browse available movies
-// users can search and filter movies here
+// users can search, filter and sort movies here
 
 type MovieCardData = {
   id: string;
@@ -20,42 +21,146 @@ type GenreOption = {
   name: string;
 };
 
+type PersonOption = {
+  id: string;
+  name: string;
+};
+
+type MovieSort =
+  | "title-asc"
+  | "title-desc"
+  | "price-asc"
+  | "price-desc"
+  | "year-desc"
+  | "year-asc"
+  | "runtime-asc"
+  | "runtime-desc";
+
 type MovieFilters = {
   q: string;
   genre: string;
-  fromYear?: number;
-  toYear?: number;
+  actorId: string;
+  directorId: string;
+  sort: MovieSort;
 };
 
 // use Prisma's own type from the current prisma client
 // this avoids guessing the exact generated import path
-type MovieFindManyArgs = NonNullable<Parameters<typeof prisma.movie.findMany>[0]>;
+type MovieFindManyArgs = NonNullable<
+  Parameters<typeof prisma.movie.findMany>[0]
+>;
 type MovieWhereInput = NonNullable<MovieFindManyArgs["where"]>;
+type MovieOrderBy = NonNullable<MovieFindManyArgs["orderBy"]>;
 
-// turn year from URL string into number
-// empty or invalid values become undefined
-function parseYear(value?: string) {
-  if (!value) {
-    return undefined;
+const defaultSort: MovieSort = "title-asc";
+
+const sortOptions: {
+  value: MovieSort;
+  label: string;
+}[] = [
+  {
+    value: "title-asc",
+    label: "Name A-Z",
+  },
+  {
+    value: "title-desc",
+    label: "Name Z-A",
+  },
+  {
+    value: "price-asc",
+    label: "Price low to high",
+  },
+  {
+    value: "price-desc",
+    label: "Price high to low",
+  },
+  {
+    value: "year-desc",
+    label: "Newest first",
+  },
+  {
+    value: "year-asc",
+    label: "Oldest first",
+  },
+  {
+    value: "runtime-asc",
+    label: "Quick watch",
+  },
+  {
+    value: "runtime-desc",
+    label: "Epic watch",
+  },
+];
+
+// URL values are just strings
+// this keeps only allowed sort values
+function parseSort(value?: string): MovieSort {
+  const allowedSorts = sortOptions.map((option) => option.value);
+
+  if (value && allowedSorts.includes(value as MovieSort)) {
+    return value as MovieSort;
   }
 
-  const year = Number(value);
-
-  if (!Number.isInteger(year)) {
-    return undefined;
-  }
-
-  return year;
+  return defaultSort;
 }
 
-// check if user is searching/filtering
+// check if user is searching/filtering/sorting
 function hasActiveFilters(filters: MovieFilters) {
   return Boolean(
     filters.q ||
       filters.genre ||
-      filters.fromYear !== undefined ||
-      filters.toYear !== undefined,
+      filters.actorId ||
+      filters.directorId ||
+      filters.sort !== defaultSort,
   );
+}
+
+// converts sort value into Prisma orderBy
+// this gives the DB a useful first order
+// later we also do human-friendly sorting in TypeScript
+function getMovieOrderBy(sort: MovieSort): MovieOrderBy {
+  switch (sort) {
+    case "title-desc":
+      return {
+        title: "desc",
+      };
+
+    case "price-asc":
+      return {
+        price: "asc",
+      };
+
+    case "price-desc":
+      return {
+        price: "desc",
+      };
+
+    case "year-desc":
+      return {
+        releaseDate: "desc",
+      };
+
+    case "year-asc":
+      return {
+        releaseDate: "asc",
+      };
+
+    case "runtime-asc":
+      return {
+        runtime: "asc",
+      };
+
+    case "runtime-desc":
+      return {
+        runtime: "desc",
+      };
+
+    case "title-asc":
+    default:
+      return {
+        title: "asc",
+      };
+  }
 }
 
 // get genres from DB for the genre dropdown
@@ -80,58 +185,226 @@ async function getGenres(): Promise<GenreOption[]> {
   }
 }
 
+// get actors from DB for the actor combobox
+async function getActors(): Promise<PersonOption[]> {
+  try {
+    const castRows = await prisma.movieCast.findMany({
+      orderBy: {
+        person: {
+          name: "asc",
+        },
+      },
+      select: {
+        person: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // same actor can appear in many movies
+    // Map removes duplicates by person id
+    const actorsById = new Map<string, PersonOption>();
+
+    for (const row of castRows) {
+      actorsById.set(row.person.id, row.person);
+    }
+
+    return Array.from(actorsById.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  } catch (error) {
+    // DB not answering
+    // combobox should not kill the page
+    console.error("Actors DB error:", error);
+    return [];
+  }
+}
+
+// get directors from DB for the director combobox
+async function getDirectors(): Promise<PersonOption[]> {
+  try {
+    const directorRows = await prisma.movieDirector.findMany({
+      orderBy: {
+        person: {
+          name: "asc",
+        },
+      },
+      select: {
+        person: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // same director can appear in many movies
+    // Map removes duplicates by person id
+    const directorsById = new Map<string, PersonOption>();
+
+    for (const row of directorRows) {
+      directorsById.set(row.person.id, row.person);
+    }
+
+    return Array.from(directorsById.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  } catch (error) {
+    // DB not answering
+    // combobox should not kill the page
+    console.error("Directors DB error:", error);
+    return [];
+  }
+}
+
+// makes text easier to compare
+// lower case, removes accents, handles symbols and keeps numbers
+function normalizeSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/&/g, " and ")
+    .replace(/\+/g, " plus ")
+    .replace(/@/g, " at ")
+    .replace(/['’`]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// splits search text into useful words/numbers
+// "Spider-Man 2" becomes ["spider", "man", "2"]
+function getSearchTokens(value: string) {
+  return normalizeSearchText(value).split(" ").filter(Boolean);
+}
+
+// counts how many small edits are needed to turn one word into another
+// example: matric -> matrix = 1 edit
+function getLevenshteinDistance(a: string, b: string) {
+  const first = normalizeSearchText(a);
+  const second = normalizeSearchText(b);
+
+  const matrix = Array.from({ length: first.length + 1 }, () =>
+    Array(second.length + 1).fill(0),
+  );
+
+  for (let i = 0; i <= first.length; i++) {
+    matrix[i][0] = i;
+  }
+
+  for (let j = 0; j <= second.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= first.length; i++) {
+    for (let j = 1; j <= second.length; j++) {
+      const cost = first[i - 1] === second[j - 1] ? 0 : 1;
+
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      );
+    }
+  }
+
+  return matrix[first.length][second.length];
+}
+
+// checks one search token against one movie/person/genre token
+function isCloseTokenMatch(queryToken: string, textToken: string) {
+  if (queryToken === textToken) {
+    return true;
+  }
+
+  // normal partial match
+  // example: "mat" matches "matrix"
+  if (queryToken.length >= 3 && textToken.includes(queryToken)) {
+    return true;
+  }
+
+  // numbers should be stricter
+  // "2" should not fuzzy-match "3"
+  const queryHasNumber = /\d/.test(queryToken);
+  const textHasNumber = /\d/.test(textToken);
+
+  if (queryHasNumber || textHasNumber) {
+    // pure short numbers must match exactly
+    if (queryToken.length <= 2 || textToken.length <= 2) {
+      return queryToken === textToken;
+    }
+
+    return getLevenshteinDistance(queryToken, textToken) <= 1;
+  }
+
+  const distance = getLevenshteinDistance(queryToken, textToken);
+
+  // short words should be strict
+  if (queryToken.length <= 2) {
+    return distance === 0;
+  }
+
+  if (queryToken.length <= 4) {
+    return distance <= 1;
+  }
+
+  if (queryToken.length <= 8) {
+    return distance <= 2;
+  }
+
+  return distance <= 3;
+}
+
+// typo tolerant match
+// supports words, numbers and weird title punctuation
+function isFuzzyMatch(search: string, value: string) {
+  const queryTokens = getSearchTokens(search);
+  const textTokens = getSearchTokens(value);
+
+  if (queryTokens.length === 0) {
+    return true;
+  }
+
+  const compactQuery = queryTokens.join("");
+  const compactText = textTokens.join("");
+
+  // handles "walle" -> "wall e"
+  // handles "spiderman" -> "spider man"
+  if (compactQuery.length >= 3 && compactText.includes(compactQuery)) {
+    return true;
+  }
+
+  // every searched word/number must match something in the movie text
+  return queryTokens.every((queryToken) =>
+    textTokens.some((textToken) => isCloseTokenMatch(queryToken, textToken)),
+  );
+}
+
+// human sorting
+// numeric: true makes "2 Fast" come before "10 Things"
+// ignorePunctuation makes "Spider-Man" sort like "Spider Man"
+const titleCollator = new Intl.Collator("en", {
+  numeric: true,
+  sensitivity: "base",
+  ignorePunctuation: true,
+});
+
 // get movies from DB
 // q searches title, description, genre, director and cast
-// genre/fromYear/toYear are extra filters
+// genre/actor/director are DB filters
+// q is checked in TypeScript so we can support fuzzy search
+// sort is also polished in TypeScript so names with numbers behave better
 async function getMovies(filters: MovieFilters): Promise<MovieCardData[]> {
   try {
     const whereFilters: MovieWhereInput[] = [];
 
-    if (filters.q.length > 0) {
-      const textFilter = {
-        contains: filters.q,
-        mode: "insensitive" as const,
-      };
-
-      whereFilters.push({
-        OR: [
-          {
-            title: textFilter,
-          },
-          {
-            description: textFilter,
-          },
-          {
-            genres: {
-              some: {
-                genre: {
-                  name: textFilter,
-                },
-              },
-            },
-          },
-          {
-            directors: {
-              some: {
-                person: {
-                  name: textFilter,
-                },
-              },
-            },
-          },
-          {
-            cast: {
-              some: {
-                person: {
-                  name: textFilter,
-                },
-              },
-            },
-          },
-        ],
-      });
-    }
-
+    // exact filters stay in Prisma
+    // these filters are not fuzzy, they are direct choices from UI
     if (filters.genre.length > 0) {
       whereFilters.push({
         genres: {
@@ -144,18 +417,22 @@ async function getMovies(filters: MovieFilters): Promise<MovieCardData[]> {
       });
     }
 
-    if (filters.fromYear !== undefined) {
+    if (filters.actorId.length > 0) {
       whereFilters.push({
-        releaseDate: {
-          gte: filters.fromYear,
+        cast: {
+          some: {
+            personId: filters.actorId,
+          },
         },
       });
     }
 
-    if (filters.toYear !== undefined) {
+    if (filters.directorId.length > 0) {
       whereFilters.push({
-        releaseDate: {
-          lte: filters.toYear,
+        directors: {
+          some: {
+            personId: filters.directorId,
+          },
         },
       });
     }
@@ -167,19 +444,19 @@ async function getMovies(filters: MovieFilters): Promise<MovieCardData[]> {
               AND: whereFilters,
             }
           : undefined,
-      orderBy: {
-        title: "asc",
-      },
+      orderBy: getMovieOrderBy(filters.sort),
       select: {
         id: true,
         title: true,
+        description: true,
         price: true,
         releaseDate: true,
         imageUrl: true,
         runtime: true,
 
         // Movie.genres is MovieGenre[]
-        // show first genre on card
+        // first genre is shown on card
+        // all genres can still be searched
         genres: {
           select: {
             genre: {
@@ -188,12 +465,88 @@ async function getMovies(filters: MovieFilters): Promise<MovieCardData[]> {
               },
             },
           },
-          take: 1,
+        },
+
+        // used only for search text
+        directors: {
+          select: {
+            person: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+
+        // used only for search text
+        cast: {
+          select: {
+            person: {
+              select: {
+                name: true,
+              },
+            },
+          },
         },
       },
     });
 
-    return movies.map((movie) => ({
+    const searchedMovies =
+      filters.q.length > 0
+        ? movies.filter((movie) => {
+            const searchableText = [
+              movie.title,
+              movie.description ?? "",
+              String(movie.releaseDate),
+              String(movie.price),
+              movie.runtime ? String(movie.runtime) : "",
+              ...movie.genres.map((movieGenre) => movieGenre.genre.name),
+              ...movie.directors.map(
+                (movieDirector) => movieDirector.person.name,
+              ),
+              ...movie.cast.map((movieCast) => movieCast.person.name),
+            ].join(" ");
+
+            return isFuzzyMatch(filters.q, searchableText);
+          })
+        : movies;
+
+    const sortedMovies = [...searchedMovies].sort((a, b) => {
+      switch (filters.sort) {
+        case "title-desc":
+          return titleCollator.compare(b.title, a.title);
+
+        case "price-asc":
+          return Number(a.price) - Number(b.price);
+
+        case "price-desc":
+          return Number(b.price) - Number(a.price);
+
+        case "year-desc":
+          return Number(b.releaseDate) - Number(a.releaseDate);
+
+        case "year-asc":
+          return Number(a.releaseDate) - Number(b.releaseDate);
+
+        case "runtime-asc":
+          return (
+            (a.runtime ?? Number.POSITIVE_INFINITY) -
+            (b.runtime ?? Number.POSITIVE_INFINITY)
+          );
+
+        case "runtime-desc":
+          return (
+            (b.runtime ?? Number.NEGATIVE_INFINITY) -
+            (a.runtime ?? Number.NEGATIVE_INFINITY)
+          );
+
+        case "title-asc":
+        default:
+          return titleCollator.compare(a.title, b.title);
+      }
+    });
+
+    return sortedMovies.map((movie) => ({
       id: movie.id,
       title: movie.title,
       price: Number(movie.price),
@@ -229,21 +582,25 @@ function EmptyState({
 }
 
 // movie filters
-// normal GET form, so the URL becomes /movies?q=matrix&genre=Action
+// normal GET form, so the URL becomes /movies?q=matrix&actorId=123
 function MovieFiltersForm({
   filters,
   genres,
+  actors,
+  directors,
 }: {
   filters: MovieFilters;
   genres: GenreOption[];
+  actors: PersonOption[];
+  directors: PersonOption[];
 }) {
   return (
     <form
       action="/movies"
       method="GET"
-      className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
+      className="sticky top-4 z-30 mt-8 rounded-2xl border border-zinc-800 bg-zinc-950/95 p-4 shadow-xl backdrop-blur"
     >
-      <div className="grid gap-3 lg:grid-cols-[1fr_180px_130px_130px_auto]">
+      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-[1fr_180px_180px_160px_180px_auto]">
         <input
           type="search"
           name="q"
@@ -252,46 +609,64 @@ function MovieFiltersForm({
           className="min-h-11 rounded-full border border-zinc-700 bg-zinc-950 px-4 text-sm text-zinc-50 outline-none transition placeholder:text-zinc-500 focus:border-red-500"
         />
 
-<div className="relative">
-  <select
-    name="genre"
-    defaultValue={filters.genre}
-    aria-label="Genre"
-    className="min-h-11 w-full appearance-none rounded-full border border-zinc-700 bg-zinc-950 px-4 pr-12 text-sm text-zinc-50 outline-none transition focus:border-red-500"
-  >
-    <option value="">All genres</option>
+        <PersonCombobox
+          people={actors}
+          selectedPersonId={filters.actorId}
+          name="actorId"
+          placeholder="Search actor..."
+          ariaLabel="Actor"
+        />
 
-    {genres.map((genre) => (
-      <option key={genre.id} value={genre.name}>
-        {genre.name}
-      </option>
-    ))}
-  </select>
+        <PersonCombobox
+          people={directors}
+          selectedPersonId={filters.directorId}
+          name="directorId"
+          placeholder="Search director..."
+          ariaLabel="Director"
+        />
 
-  {/* custom select arrow */}
-  {/* appearance-none removes browser arrow, this one is ours */}
-  <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400">
-    ▾
-  </span>
-</div>
+        <div className="relative">
+          <select
+            name="genre"
+            defaultValue={filters.genre}
+            aria-label="Genre"
+            className="min-h-11 w-full appearance-none rounded-full border border-zinc-700 bg-zinc-950 px-4 pr-12 text-sm text-zinc-50 outline-none transition focus:border-red-500"
+          >
+            <option value="">All genres</option>
 
-<input
-  type="text"
-  inputMode="numeric"
-  name="fromYear"
-  defaultValue={filters.fromYear ?? ""}
-  placeholder="From year"
-  className="min-h-11 rounded-full border border-zinc-700 bg-zinc-950 px-4 text-sm text-zinc-50 outline-none transition placeholder:text-zinc-500 focus:border-red-500"
-/>
+            {genres.map((genre) => (
+              <option key={genre.id} value={genre.name}>
+                {genre.name}
+              </option>
+            ))}
+          </select>
 
-<input
-  type="text"
-  inputMode="numeric"
-  name="toYear"
-  defaultValue={filters.toYear ?? ""}
-  placeholder="To year"
-  className="min-h-11 rounded-full border border-zinc-700 bg-zinc-950 px-4 text-sm text-zinc-50 outline-none transition placeholder:text-zinc-500 focus:border-red-500"
-/>
+          {/* custom select arrow */}
+          {/* appearance-none removes browser arrow, this one is ours */}
+          <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400">
+            ▾
+          </span>
+        </div>
+
+        <div className="relative">
+          <select
+            name="sort"
+            defaultValue={filters.sort}
+            aria-label="Sort movies"
+            className="min-h-11 w-full appearance-none rounded-full border border-zinc-700 bg-zinc-950 px-4 pr-12 text-sm text-zinc-50 outline-none transition focus:border-red-500"
+          >
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                Sort: {option.label}
+              </option>
+            ))}
+          </select>
+
+          {/* custom select arrow */}
+          <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400">
+            ▾
+          </span>
+        </div>
 
         <button
           type="submit"
@@ -373,24 +748,28 @@ export default async function MoviesPage({
   searchParams: Promise<{
     q?: string;
     genre?: string;
-    fromYear?: string;
-    toYear?: string;
+    actorId?: string;
+    directorId?: string;
+    sort?: string;
   }>;
 }) {
   const params = await searchParams;
 
   // filters come from URL
-  // example: /movies?q=nolan&genre=Action&fromYear=2000
+  // example: /movies?q=nolan&genre=Action&sort=year-desc
   const filters: MovieFilters = {
     q: params.q?.trim() ?? "",
     genre: params.genre?.trim() ?? "",
-    fromYear: parseYear(params.fromYear),
-    toYear: parseYear(params.toYear),
+    actorId: params.actorId?.trim() ?? "",
+    directorId: params.directorId?.trim() ?? "",
+    sort: parseSort(params.sort),
   };
 
-  const [movies, genres] = await Promise.all([
+  const [movies, genres, actors, directors] = await Promise.all([
     getMovies(filters),
     getGenres(),
+    getActors(),
+    getDirectors(),
   ]);
 
   const isFiltering = hasActiveFilters(filters);
@@ -408,8 +787,12 @@ export default async function MoviesPage({
               Browse movies
             </h1>
 
-            <p className="mt-4 text-sm leading-7 text-zinc-400 sm:text-base">
-              Search and filter the catalog by title, genre, people, or year.
+            <p
+              id="movie-filters"
+              className="mt-4 scroll-mt-24 text-sm leading-7 text-zinc-400 sm:text-base"
+            >
+              Search and filter the catalog by title, genre, people, or sort
+              order.
             </p>
           </div>
 
@@ -421,12 +804,17 @@ export default async function MoviesPage({
           </Link>
         </div>
 
-        <MovieFiltersForm filters={filters} genres={genres} />
+        <MovieFiltersForm
+          filters={filters}
+          genres={genres}
+          actors={actors}
+          directors={directors}
+        />
 
         {isFiltering && (
           <p className="mt-6 text-sm text-zinc-400">
             Showing {movies.length} result{movies.length === 1 ? "" : "s"} from
-            your current search and filters.
+            your current search, filters and sort.
           </p>
         )}
 
@@ -435,7 +823,7 @@ export default async function MoviesPage({
             isFiltering ? (
               <EmptyState
                 title="No movies found."
-                description="Try another title, genre, director, actor, or year range."
+                description="Try another title, genre, director, actor, or sort option."
               />
             ) : (
               <EmptyState
@@ -452,6 +840,13 @@ export default async function MoviesPage({
           )}
         </div>
       </section>
+
+      <a
+        href="#movie-filters"
+        className="fixed bottom-6 right-6 z-40 rounded-full border border-zinc-700 bg-zinc-900/95 px-4 py-3 text-sm font-semibold text-zinc-100 shadow-xl backdrop-blur transition hover:border-red-500 hover:text-red-300"
+      >
+        ↑ Filters
+      </a>
     </main>
   );
 }
