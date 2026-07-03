@@ -41,10 +41,12 @@ function RegisterForm() {
     },
     onSubmit: async ({ value }) => {
       console.log(value);
+      const avatarUrl = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(value.name)}`;
       const result = await authClient.signUp.email({
         name: value.name,
         email: value.email,
         password: value.password,
+        image: avatarUrl,
       });
 
       if (result.error) {

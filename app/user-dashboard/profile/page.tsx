@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { User, Mail, Shield, Calendar, ArrowLeft } from "lucide-react";
 
+import { EditProfileDialog } from "./_components/edit-profile-dialog";
+
 export default async function ProfilePage() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -65,26 +67,27 @@ export default async function ProfilePage() {
         <div className="h-px bg-zinc-800"></div>
 
         <Card className="border border-zinc-800 bg-zinc-900/50 backdrop-blur">
-          <CardHeader className="flex flex-row items-center gap-4 pb-6">
-            {dbUser.image ? (
-              <img
-                src={dbUser.image}
-                alt={dbUser.name}
-                className="h-16 w-16 rounded-full object-cover ring-2 ring-red-500/20"
-              />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 text-red-400 ring-2 ring-red-500/20">
-                <span className="text-2xl font-bold uppercase">
-                  {dbUser.name.charAt(0)}
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6">
+            <div className="flex items-center gap-4">
+              {(() => {
+                const avatarUrl = dbUser.image || `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(dbUser.name)}`;
+                return (
+                  <img
+                    src={avatarUrl}
+                    alt={dbUser.name}
+                    className="h-16 w-16 rounded-full object-cover ring-2 ring-red-500/20 bg-zinc-800"
+                  />
+                );
+              })()}
+              <div className="flex flex-col">
+                <CardTitle className="text-xl font-bold text-white">{dbUser.name}</CardTitle>
+                <span className="text-xs text-zinc-400 capitalize">
+                  {dbUser.role || "User"} Account
                 </span>
               </div>
-            )}
-            <div className="flex flex-col">
-              <CardTitle className="text-xl font-bold text-white">{dbUser.name}</CardTitle>
-              <span className="text-xs text-zinc-400 capitalize">
-                {dbUser.role || "User"} Account
-              </span>
             </div>
+
+            <EditProfileDialog user={{ name: dbUser.name, image: dbUser.image }} />
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
