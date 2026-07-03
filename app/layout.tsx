@@ -8,6 +8,13 @@ import { headers } from "next/headers";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Toaster } from "sonner";
 import { prisma } from "@/lib/prisma";
+import { Menu } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,7 +26,7 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 });
 
-export default async function RootLayout({ 
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -43,7 +50,7 @@ export default async function RootLayout({
 
   const isAdmin = currentUser?.role === "admin";
 
-    const cartQuantityResult = session?.user?.id
+  const cartQuantityResult = session?.user?.id
     ? await prisma.cartItem.aggregate({
         where: {
           cart: {
@@ -57,6 +64,7 @@ export default async function RootLayout({
     : null;
 
   const cartQuantity = cartQuantityResult?._sum.quantity ?? 0;
+  const cartLabel = session ? `Cart(${cartQuantity})` : "Cart";
 
   return (
     <html
@@ -72,24 +80,25 @@ export default async function RootLayout({
       <body>
         <ThemeProvider defaultTheme="dark" enableSystem={false}>
           {/* top nav */}
-          {/* this layout wraps the whole app, so nav appears on every page */}
+          {/* desktop nav stays normal, mobile nav becomes dropdown */}
           <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur">
-            <nav className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
               <Link
                 href="/"
-                className="flex items-center gap-3 text-base font-bold tracking-tight text-white sm:text-lg"
+                className="flex min-w-0 items-center gap-3 text-base font-bold tracking-tight text-white sm:text-lg"
               >
                 {/* popcorn icon */}
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-xl ring-1 ring-red-400/40">
                   🍿
                 </span>
 
-                <span className="leading-tight">
+                <span className="truncate leading-tight">
                   LONELY RIDER <span className="text-red-400">TEAM</span>
                 </span>
               </Link>
 
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-zinc-300 sm:justify-end">
+              {/* desktop nav */}
+              <div className="hidden items-center gap-x-5 text-sm text-zinc-300 md:flex">
                 <Link href="/" className="transition hover:text-white">
                   Home
                 </Link>
@@ -98,18 +107,18 @@ export default async function RootLayout({
                   Movies
                 </Link>
 
-                {/* cart link */}
-                {/* keep this only if /cart exists or is coming soon */}
                 <Link href="/cart" className="transition hover:text-white">
-  Cart{session ? `(${cartQuantity})` : ""}
-</Link>
+                  {cartLabel}
+                </Link>
 
-                <Link href="/user-dashboard" className="transition hover:text-white">
+                <Link
+                  href="/user-dashboard"
+                  className="transition hover:text-white"
+                >
                   Dashboard
                 </Link>
 
                 {session ? (
-                  // user is logged in
                   <>
                     <Link
                       href="/profile"
@@ -127,15 +136,14 @@ export default async function RootLayout({
                       </Link>
                     )}
 
-                  <SignOutButton
-                    variant="ghost"
-                    className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
-                  >
-                    Sign Out
-                  </SignOutButton>
+                    <SignOutButton
+                      variant="ghost"
+                      className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
+                    >
+                      Sign Out
+                    </SignOutButton>
                   </>
                 ) : (
-                  // user is not logged in
                   <>
                     <Link
                       href="/sign-in"
@@ -153,6 +161,75 @@ export default async function RootLayout({
                   </>
                 )}
               </div>
+
+              {/* mobile nav */}
+              <div className="md:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Open navigation menu"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-100 transition hover:border-red-500 hover:text-red-300"
+                    >
+                      <Menu className="h-5 w-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-56 border-zinc-800 bg-zinc-950 text-zinc-100"
+                  >
+                    <DropdownMenuItem asChild>
+                      <Link href="/">Home</Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem asChild>
+                      <Link href="/movies">Movies</Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem asChild>
+                      <Link href="/cart">{cartLabel}</Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem asChild>
+                      <Link href="/user-dashboard">Dashboard</Link>
+                    </DropdownMenuItem>
+
+                    {session ? (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/profile">Profile</Link>
+                        </DropdownMenuItem>
+
+                        {isAdmin && (
+                          <DropdownMenuItem asChild>
+                            <Link href="/movies/create">Create movie</Link>
+                          </DropdownMenuItem>
+                        )}
+
+                        <div className="px-2 py-1.5">
+                          <SignOutButton
+                            variant="ghost"
+                            className="h-9 w-full justify-start px-2 text-zinc-100 hover:bg-zinc-800 hover:text-white"
+                          >
+                            Sign Out
+                          </SignOutButton>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/sign-in">Sign In</Link>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem asChild>
+                          <Link href="/register">Register</Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </nav>
           </header>
 
@@ -163,4 +240,4 @@ export default async function RootLayout({
       </body>
     </html>
   );
-} 
+}
