@@ -47,6 +47,8 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-badge-success: var(--badge-success);
+  --color-badge-paid: var(--badge-paid);
 }
 
 :root {
@@ -82,6 +84,8 @@
   --sidebar-ring: oklch(0.708 0 0);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
+  --badge-success: oklch(53.504% 0.17858 142.831);
+  --badge-paid: oklch(76.9% 0.188 70.08);
 }
 
 .dark {
@@ -116,6 +120,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --badge-success: oklch(53.504% 0.17858 142.831);
+  --badge-paid: oklch(76.9% 0.188 70.08);
 }
 
 @layer base {
@@ -129,8 +135,6 @@
     @apply font-sans;
   }
 }
-
-
 
 /* slow movie carousel */
 /* used on landing page movie rows */

@@ -55,7 +55,7 @@ export default async function RootLayout({
       )}
     >
       <body>
-        <ThemeProvider>
+        <ThemeProvider defaultTheme="dark" enableSystem={false}>
           {/* top nav */}
           {/* this layout wraps the whole app, so nav appears on every page */}
           <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur">

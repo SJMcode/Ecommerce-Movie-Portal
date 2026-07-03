@@ -126,7 +126,7 @@ export default async function UserDashboardPage() {
           <h1 className="text-2xl md:text-4xl font-semibold">
             Welcome back, {`${firstName}`}👋
           </h1>
-          <div className="text-xs text-gray-300 space-y-1">
+          <div className="text-xs text-muted-foreground space-y-1">
             <p className="font-semibold">
               Track your orders, library and account settings in one place
             </p>
@@ -142,7 +142,7 @@ export default async function UserDashboardPage() {
           <Card>
             <CardHeader>
               <div className="flex justify-between">
-                <CardTitle className="font-extralight text-gray-300">
+                <CardTitle className="font-light text-muted-foreground">
                   ORDER STATUS OVERVIEW
                 </CardTitle>
                 <PackageOpenIcon className="text-red-400" size={20} />
@@ -150,16 +150,16 @@ export default async function UserDashboardPage() {
             </CardHeader>
             <CardContent className="text-xl">
               <div className="grid grid-cols-2 gap-2 lg:gap-0 lg:flex lg:justify-around">
-                <Badge className="bg-neutral-100/60">
+                <Badge className="bg-accent-foreground/60 ">
                   Pending: {`${data.statusCounts.pending}`}
                 </Badge>
-                <Badge className="bg-amber-500/80">
+                <Badge className="bg-badge-paid/80">
                   Paid: {`${data.statusCounts.paid}`}
                 </Badge>
-                <Badge className="bg-green-500/80">
+                <Badge className="bg-badge-success/80">
                   Completed: {`${data.statusCounts.completed}`}
                 </Badge>
-                <Badge className="bg-red-500/80">
+                <Badge className="bg-destructive/80">
                   Cancelled: {`${data.statusCounts.cancelled}`}
                 </Badge>
               </div>
@@ -168,7 +168,7 @@ export default async function UserDashboardPage() {
           <Card>
             <CardHeader>
               <div className="flex justify-between">
-                <CardTitle className="font-extralight text-gray-300">
+                <CardTitle className="font-light text-muted-foreground">
                   TOTAL ORDERS
                 </CardTitle>
                 <ArchiveIcon className="text-red-400" size={20} />
@@ -180,7 +180,7 @@ export default async function UserDashboardPage() {
           <Card>
             <CardHeader>
               <div className="flex justify-between">
-                <CardTitle className="font-extralight text-gray-300">
+                <CardTitle className="font-light text-muted-foreground">
                   MOVIES IN LIBRARY
                 </CardTitle>
                 <Film className="text-red-400" size={20} />
@@ -192,7 +192,7 @@ export default async function UserDashboardPage() {
           <Card>
             <CardHeader>
               <div className="flex justify-between">
-                <CardTitle className="font-extralight text-gray-300">
+                <CardTitle className="font-light text-muted-foreground">
                   LIFETIME SPENT
                 </CardTitle>
                 <WalletIcon className="text-red-400" size={20} />
@@ -220,7 +220,7 @@ export default async function UserDashboardPage() {
                         Order History
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-xs text-gray-300">
+                    <CardContent className="text-xs text-muted-foreground">
                       View past and current order details
                     </CardContent>
                   </div>
@@ -245,7 +245,7 @@ export default async function UserDashboardPage() {
                         Account Settings
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-xs text-gray-300">
+                    <CardContent className="text-xs text-muted-foreground">
                       Profile, email, password
                     </CardContent>
                   </div>
@@ -270,7 +270,7 @@ export default async function UserDashboardPage() {
                         My Library
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-xs text-gray-300">
+                    <CardContent className="text-xs text-muted-foreground">
                       Movies you own
                     </CardContent>
                   </div>
@@ -293,7 +293,7 @@ export default async function UserDashboardPage() {
                     <CardHeader>
                       <CardTitle className="font-semibold">Favorites</CardTitle>
                     </CardHeader>
-                    <CardContent className="text-xs text-gray-300">
+                    <CardContent className="text-xs text-muted-foreground">
                       Your saved favorites
                     </CardContent>
                   </div>
@@ -318,7 +318,7 @@ export default async function UserDashboardPage() {
                         Payment Methods
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-xs text-gray-300">
+                    <CardContent className="text-xs text-muted-foreground">
                       Cards & Billing
                     </CardContent>
                   </div>
