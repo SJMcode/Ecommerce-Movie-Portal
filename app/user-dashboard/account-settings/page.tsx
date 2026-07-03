@@ -3,5 +3,5 @@
 import { redirect } from "next/navigation";
 
 export default function AccountSettingsPage() {
-    redirect("/profile");
+    redirect("/user-dashboard/profile");
 }

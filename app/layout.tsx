@@ -120,13 +120,6 @@ export default async function RootLayout({
 
                 {session ? (
                   <>
-                    <Link
-                      href="/profile"
-                      className="transition hover:text-white"
-                    >
-                      Profile
-                    </Link>
-
                     {isAdmin && (
                       <Link
                         href="/movies/create"
@@ -197,10 +190,6 @@ export default async function RootLayout({
 
                     {session ? (
                       <>
-                        <DropdownMenuItem asChild>
-                          <Link href="/profile">Profile</Link>
-                        </DropdownMenuItem>
-
                         {isAdmin && (
                           <DropdownMenuItem asChild>
                             <Link href="/movies/create">Create movie</Link>

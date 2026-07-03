@@ -236,7 +236,7 @@ export default async function UserDashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/profile">
+            <Link href="/user-dashboard/profile">
               <Card className={`${quickActionsCardClass}`}>
                 <div className="flex items-center">
                   <CogIcon

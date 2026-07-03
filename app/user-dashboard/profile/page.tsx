@@ -44,11 +44,11 @@ export default async function ProfilePage() {
       <section className="flex flex-col gap-8 mx-auto max-w-3xl px-4 py-12">
         <div className="flex items-center gap-4">
           <Link
-            href="/"
+            href="/user-dashboard"
             className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Home
+            Back to Dashboard
           </Link>
         </div>
 
