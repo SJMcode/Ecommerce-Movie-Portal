@@ -19,7 +19,7 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 });
 
-export default async function RootLayout({
+export default async function RootLayout({ 
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -42,6 +42,21 @@ export default async function RootLayout({
     : null;
 
   const isAdmin = currentUser?.role === "admin";
+
+    const cartQuantityResult = session?.user?.id
+    ? await prisma.cartItem.aggregate({
+        where: {
+          cart: {
+            userId: session.user.id,
+          },
+        },
+        _sum: {
+          quantity: true,
+        },
+      })
+    : null;
+
+  const cartQuantity = cartQuantityResult?._sum.quantity ?? 0;
 
   return (
     <html
@@ -86,8 +101,8 @@ export default async function RootLayout({
                 {/* cart link */}
                 {/* keep this only if /cart exists or is coming soon */}
                 <Link href="/cart" className="transition hover:text-white">
-                  Cart
-                </Link>
+  Cart{session ? `(${cartQuantity})` : ""}
+</Link>
 
                 <Link href="/user-dashboard" className="transition hover:text-white">
                   Dashboard
@@ -112,12 +127,12 @@ export default async function RootLayout({
                       </Link>
                     )}
 
-                    <SignOutButton
-                      variant="ghost"
-                      className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
-                    >
-                      Sign Out
-                    </SignOutButton>
+                  <SignOutButton
+                    variant="ghost"
+                    className="h-auto p-0 text-zinc-300 hover:bg-transparent hover:text-white"
+                  >
+                    Sign Out
+                  </SignOutButton>
                   </>
                 ) : (
                   // user is not logged in
@@ -148,4 +163,4 @@ export default async function RootLayout({
       </body>
     </html>
   );
-}
+} 
