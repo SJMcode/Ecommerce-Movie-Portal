@@ -96,6 +96,13 @@ export default async function RootLayout({
                 {session ? (
                   // user is logged in
                   <>
+                    <Link
+                      href="/profile"
+                      className="transition hover:text-white"
+                    >
+                      Profile
+                    </Link>
+
                     {isAdmin && (
                       <Link
                         href="/movies/create"
