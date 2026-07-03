@@ -305,11 +305,11 @@ function MovieCarouselSection({ section }: { section: MovieSection }) {
                 return (
                   <article
                     key={`${section.title}-${movie.id}-${index}`}
-                    className="w-[268px] shrink-0 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition hover:-translate-y-1 hover:border-red-500/60 hover:bg-zinc-800/70 sm:p-5"
+                    className="w-67 shrink-0 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm transition hover:-translate-y-1 hover:border-red-500/60 hover:bg-zinc-800/70 sm:p-5"
                   >
                     <Link href={movieHref} className="block">
                       <div
-                        className="mb-4 flex aspect-[2/3] items-center justify-center rounded-xl bg-cover bg-center text-center"
+                        className="mb-4 flex aspect-2/3 items-center justify-center rounded-xl bg-cover bg-center text-center"
                         // movie image
                         // if DB has imageUrl, show image
                         // if not, show dark card with title

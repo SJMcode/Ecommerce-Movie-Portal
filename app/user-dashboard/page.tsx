@@ -67,6 +67,7 @@ async function getDashboardData(userId: string) {
     0,
   );
 
+  //   NUMBER OF STATUSES IN FOUR EXPRESSIONS (SAME AS BELOW, BUT MORE HUMAN-READABLE)
   //   const pending = orders.filter((order) => order.status === "pending").length;
   //   const paid = orders.filter((order) => order.status === "paid").length;
   //   const completed = orders.filter(
@@ -76,6 +77,7 @@ async function getDashboardData(userId: string) {
   //     (order) => order.status === "cancelled",
   //   ).length;
 
+  // NUMBER OF STATUSES IN ONE HIGHLY IDIOMATIC EXPRESSION
   // This reduce function iterates over orders and adds 1 to each status it comes across in orders.status
   // This is the basic flow in one iteration:
   // Looks at orders(which is an array of multiple orders) ->
@@ -136,7 +138,7 @@ export default async function UserDashboardPage() {
             </p>
           </div>
         </div>
-        <div className="h-px bg-neutral-700/40"></div>
+        <div className="h-px bg-neutral-700/40" />
         {/* USER METRICS DASHBOARD */}
         <div className="flex flex-col md:grid md:grid-cols-2 gap-4">
           <Card>
@@ -203,8 +205,10 @@ export default async function UserDashboardPage() {
         </div>
 
         {/* ----------------------------- QUICK ACTIONS SECTION -------------------------*/}
+        
 
         <div className="flex flex-col gap-4">
+          <div className="h-px bg-neutral-700/40" />
           <h2 className="text-xl">Quick Actions</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 ">
             <Link href="/user-dashboard/order-history">
@@ -331,8 +335,10 @@ export default async function UserDashboardPage() {
             </Link>
           </div>
         </div>
-        <div>
-          <h1>Recent Activity section to be added here aswell, 3 most recent purchases </h1>
+
+        <div className="flex flex-col gap-4">
+          <div className="h-px bg-neutral-700/40" />
+          <h1>Recent Activity section to be added here aswell, 3 most recent purchases + Recommended for you? OR SKIP! </h1>
           {/* List 3 most recent purchases here via {data.recentOrders} */}
         </div>
       </section>
