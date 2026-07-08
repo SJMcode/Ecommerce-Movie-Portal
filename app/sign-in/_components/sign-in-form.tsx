@@ -12,8 +12,10 @@ import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
 import { useForm } from "@tanstack/react-form"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { toast } from "sonner"
 import { z } from "zod"
+import { Eye, EyeOff } from "lucide-react"
 
 const formSchema = z.object({
   email: z.email(),
@@ -23,6 +25,7 @@ const formSchema = z.object({
 
 function SignInForm() {
   const router = useRouter()
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm({
     defaultValues: {
@@ -90,15 +93,30 @@ function SignInForm() {
             return (
               <Field data-invalid={isInvalid}>
                 <FieldLabel htmlFor={field.name}>Password</FieldLabel>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onChange={(ev) => field.handleChange(ev.target.value)}
-                  onBlur={field.handleBlur}
-                  aria-invalid={isInvalid}
-                  type="password"
-                />
+                <div className="relative w-full">
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onChange={(ev) => field.handleChange(ev.target.value)}
+                    onBlur={field.handleBlur}
+                    aria-invalid={isInvalid}
+                    type={showPassword ? "text" : "password"}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-zinc-200 transition"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>
             )

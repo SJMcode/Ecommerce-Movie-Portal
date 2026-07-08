@@ -7,6 +7,7 @@ import Link from "next/link";
 import { User, Mail, Shield, Calendar, ArrowLeft } from "lucide-react";
 
 import { EditProfileDialog } from "./_components/edit-profile-dialog";
+import { ChangePasswordDialog } from "./_components/change-password-dialog";
 
 export default async function ProfilePage() {
   const session = await auth.api.getSession({
@@ -87,7 +88,10 @@ export default async function ProfilePage() {
               </div>
             </div>
 
-            <EditProfileDialog user={{ name: dbUser.name, image: dbUser.image }} />
+            <div className="flex flex-wrap items-center gap-3">
+              <ChangePasswordDialog />
+              <EditProfileDialog user={{ name: dbUser.name, image: dbUser.image }} />
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
