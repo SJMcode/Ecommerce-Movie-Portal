@@ -42,9 +42,43 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-screen bg-zinc-950 text-white">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 border-r border-zinc-900 bg-zinc-950/60 backdrop-blur p-6 flex flex-col gap-8 shrink-0">
+    <div className="flex flex-col md:flex-row min-h-screen bg-zinc-950 text-white">
+      {/* Mobile Top Navbar (Visible only on mobile) */}
+      <header className="md:hidden border-b border-zinc-900 bg-zinc-950/80 backdrop-blur px-6 py-4 flex flex-col gap-4 shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500/15 text-sm ring-1 ring-red-400/40">
+              👑
+            </span>
+            <span className="font-bold tracking-tight text-xs text-zinc-100">
+              LONELY RIDER <span className="text-red-500 font-extrabold">ADMIN</span>
+            </span>
+          </div>
+          <Link
+            href="/"
+            className="text-xs font-semibold text-zinc-400 hover:text-white"
+          >
+            Exit to Store
+          </Link>
+        </div>
+        <nav className="flex gap-2">
+          <Link
+            href="/admin/analytics"
+            className="flex-1 text-center py-2.5 text-xs font-semibold bg-zinc-900/60 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition active:bg-zinc-800"
+          >
+            Analytics
+          </Link>
+          <Link
+            href="/admin/users"
+            className="flex-1 text-center py-2.5 text-xs font-semibold bg-zinc-900/60 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition active:bg-zinc-800"
+          >
+            Users
+          </Link>
+        </nav>
+      </header>
+
+      {/* Sidebar Navigation (Visible only on Desktop) */}
+      <aside className="hidden md:flex w-64 border-r border-zinc-900 bg-zinc-950/60 backdrop-blur p-6 flex-col gap-8 shrink-0">
         <div className="flex items-center gap-2 px-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/15 text-lg ring-1 ring-red-400/40">
             👑
@@ -76,7 +110,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       {/* Main Page Area */}
       <div className="flex-1 min-w-0 flex flex-col bg-zinc-950">
-        <main className="flex-1 overflow-y-auto p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>
     </div>
   );
