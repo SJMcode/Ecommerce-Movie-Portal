@@ -28,7 +28,10 @@ import { headers } from "next/headers";
  *       404:
  *         description: Order not found
  */
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  const orderId = resolvedParams.id;
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -39,7 +42,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   try {
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id: orderId },
       include: {
         items: {
           include: {
