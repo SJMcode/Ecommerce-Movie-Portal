@@ -8,10 +8,19 @@ import EmailVerification from "@/components/email/templates/email-verification";
 
 
 
+const cleanAuthUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "");
+
+const trustedOrigins = [
+  cleanAuthUrl || "",
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
+  "https://ecommerce-movie-portal.vercel.app",
+].filter(Boolean);
+
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
+    trustedOrigins,
 
     emailAndPassword:{
         enabled: true,
