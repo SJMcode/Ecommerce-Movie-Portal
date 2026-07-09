@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Target the development stage of our multi-stage Dockerfile for hot-reloads
+      target: development
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount the local directory to the /app folder in the container for live reloading
+      - .:/app
+      # Exclude local node_modules volume so Docker uses the modules installed inside the container
+      - /app/node_modules
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
