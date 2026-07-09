@@ -43,15 +43,19 @@ ${data.url}`,
         async sendVerificationEmail(data){
             console.log("EMAIL VERIFICATION", data.url)
 
-            const html = await render(<EmailVerification url={data.url} />)
-            const text = toPlainText(html)
+            try {
+                const html = await render(<EmailVerification url={data.url} />)
+                const text = toPlainText(html)
 
-            await sendEmail(data.user.email, 
-                "Email Verification",
-                text,
-                html
-
+                await sendEmail(
+                    data.user.email, 
+                    "Email Verification",
+                    text,
+                    html
                 );
+            } catch (error) {
+                console.error("❌ SMTP Verification Email Dispatch Failed:", error);
+            }
         },
     },
 
