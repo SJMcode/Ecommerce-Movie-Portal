@@ -9,6 +9,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { Toaster } from "sonner";
 import { prisma } from "@/lib/prisma";
 import { Menu, ShoppingCart } from "lucide-react";
+import { LowStockBell } from "@/app/user-dashboard/_components/low-stock-bell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +54,25 @@ export default async function RootLayout({
 
   const isAdmin = currentUser?.role === "admin";
   const avatarUrl = currentUser?.image || (currentUser ? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(currentUser.name)}` : "");
+
+  // Query low stock items if admin
+  const lowStockMovies = isAdmin
+    ? await prisma.movie.findMany({
+        where: {
+          stock: {
+            lt: 5,
+          },
+        },
+        select: {
+          id: true,
+          title: true,
+          stock: true,
+        },
+        orderBy: {
+          stock: "asc",
+        },
+      })
+    : [];
 
   const cartQuantityResult = session?.user?.id
     ? await prisma.cartItem.aggregate({
@@ -119,6 +139,10 @@ export default async function RootLayout({
                     </span>
                   )}
                 </Link>
+
+                {isAdmin && (
+                  <LowStockBell initialMovies={lowStockMovies} />
+                )}
 
                 {session && currentUser ? (
                   <DropdownMenu>

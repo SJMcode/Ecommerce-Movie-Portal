@@ -28,10 +28,24 @@ export async function createOrder(values: CheckoutInput): Promise<OrderResult> {
     return { ok: false, error: "You must be signed in to checkout." };
   }
 
+  if (!session.user.emailVerified) {
+    return { ok: false, error: "Your email address must be verified before checking out." };
+  }
+
+  // Enforce account suspension check
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { banned: true },
+  });
+
+  if (dbUser?.banned) {
+    return { ok: false, error: "Your account is suspended. Purchases are blocked." };
+  }
+
   // 1. Validate Form Inputs
   const parsed = checkoutSchema.safeParse(values);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.errors[0].message };
+    return { ok: false, error: parsed.error.message };
   }
 
   // 2. Retrieve Cart and Items
@@ -107,7 +121,7 @@ export async function createOrder(values: CheckoutInput): Promise<OrderResult> {
     });
 
     return { ok: true, orderId: result.id };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Checkout Transaction Error:", error);
     return { ok: false, error: "Failed to place order. Please try again." };
   }

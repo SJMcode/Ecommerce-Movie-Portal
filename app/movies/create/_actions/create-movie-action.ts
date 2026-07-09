@@ -96,6 +96,7 @@ export async function createMovie(
       imageUrl: data.imageUrl,
       stock: data.stock,
       runtime: data.runtime,
+      authorId: session.user.id,
       genres: {
         createMany: {
           data: data.genres.map((genreId) => ({

@@ -1,9 +1,13 @@
 "use server";
 
+import React from "react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import Stripe from "stripe";
+import { render, toPlainText } from "react-email";
+import { sendEmail } from "@/lib/email";
+import OrderConfirmation from "@/components/email/templates/order-confirmation";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
@@ -40,11 +44,16 @@ export async function finalizeOrder(orderId: string, sessionId: string): Promise
       }
     }
 
-    // 2. Fetch the pending order
+    // 2. Fetch the pending order with user and item movie details
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        items: true,
+        user: true,
+        items: {
+          include: {
+            movie: true,
+          },
+        },
       },
     });
 
@@ -83,6 +92,35 @@ export async function finalizeOrder(orderId: string, sessionId: string): Promise
           });
         }
       });
+
+      // 4. Send Order Confirmation Email asynchronously
+      try {
+        const orderItems = order.items.map((item) => ({
+          title: item.movie.title,
+          quantity: item.quantity,
+          price: Number(item.unitPriceAtPurchase),
+        }));
+
+        const html = await render(
+          <OrderConfirmation
+            customerName={order.user.name || "Kund"}
+            orderId={order.id}
+            items={orderItems}
+            totalAmount={Number(order.totalAmount)}
+          />
+        );
+        const text = toPlainText(html);
+
+        await sendEmail(
+          order.user.email || "",
+          `Order Confirmation #${order.id} - Lonely Rider`,
+          text,
+          html
+        );
+      } catch (emailError) {
+        console.error("Failed to send order confirmation email:", emailError);
+        // Note: We still return ok: true because the database order and payment are successful
+      }
     }
 
     return { ok: true };

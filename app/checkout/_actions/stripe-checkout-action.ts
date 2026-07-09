@@ -21,6 +21,20 @@ export async function createStripeSession(billingName: string, billingEmail: str
     return { ok: false, error: "You must be signed in to checkout." };
   }
 
+  if (!session.user.emailVerified) {
+    return { ok: false, error: "Your email address must be verified before checking out." };
+  }
+
+  // Enforce account suspension check
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { banned: true },
+  });
+
+  if (dbUser?.banned) {
+    return { ok: false, error: "Your account is suspended. Purchases are blocked." };
+  }
+
   if (!billingName || !billingEmail) {
     return { ok: false, error: "Billing name and email are required." };
   }
@@ -121,8 +135,8 @@ export async function createStripeSession(billingName: string, billingEmail: str
     }
 
     return { ok: true, url: stripeSession.url };
-  } catch (error: any) {
-    console.error("Stripe Session Creation Error:", error);
-    return { ok: false, error: `Stripe Error: ${error.message || "Failed to initialize payment gateway."}` };
+  } catch (er) {
+    console.error("Stripe Session Creation Error:", er);
+    return { ok: false, error: `Stripe Error: ${er || "Failed to initialize payment gateway."}` };
   }
 }

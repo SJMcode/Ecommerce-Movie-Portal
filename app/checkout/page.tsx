@@ -63,6 +63,72 @@ export default async function CheckoutPage() {
     redirect("/sign-in?callbackUrl=/checkout");
   }
 
+  // Enforce email verification
+  if (!session.user.emailVerified) {
+    return (
+      <main className="px-6 min-h-[85vh] flex items-center justify-center">
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 p-12 text-center max-w-xl mx-auto space-y-6">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-950 border border-red-800">
+            <span className="text-red-500 text-xl font-bold">!</span>
+          </div>
+          <h3 className="text-xl font-bold text-zinc-200">Email Verification Required</h3>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            For security reasons, your email address (<strong>{session.user.email}</strong>) must be verified before you can check out and purchase movies. Please click the verification link we sent to your inbox.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/user-dashboard/profile"
+              className="inline-block rounded-full bg-zinc-800 border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-700"
+            >
+              Go to Profile
+            </Link>
+            <Link
+              href="/movies"
+              className="inline-block rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-500"
+            >
+              Browse Movies
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Enforce account suspension check from db
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { banned: true, banReason: true },
+  });
+
+  if (currentUser?.banned) {
+    return (
+      <main className="px-6 min-h-[85vh] flex items-center justify-center">
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 p-12 text-center max-w-xl mx-auto space-y-6">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-950 border border-red-800">
+            <span className="text-red-500 text-xl font-bold">!</span>
+          </div>
+          <h3 className="text-xl font-bold text-zinc-200">Account Suspended</h3>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            Your account has been suspended for violating store policies. Purchase privileges have been temporarily or permanently restricted.
+          </p>
+          {currentUser.banReason && (
+            <p className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 p-3.5 rounded-xl max-w-md mx-auto">
+              <strong>Reason:</strong> {currentUser.banReason}
+            </p>
+          )}
+          <div className="flex justify-center">
+            <Link
+              href="/"
+              className="inline-block rounded-full bg-zinc-800 border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-700"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const items = await getCartItems(session.user.id);
   const cartTotal = items.reduce((sum, item) => sum + item.subtotal, 0);
 

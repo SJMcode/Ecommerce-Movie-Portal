@@ -5,12 +5,14 @@ import { prisma } from "@/lib/prisma";
 import {
   ArchiveIcon,
   ArrowRight,
+  BarChart3,
   CogIcon,
   CreditCardIcon,
   Film,
   HeartIcon,
   PackageIcon,
   PackageOpenIcon,
+  Users,
   WalletIcon,
 } from "lucide-react";
 import { headers } from "next/headers";
@@ -119,6 +121,12 @@ export default async function UserDashboardPage() {
 
   const data = await getDashboardData(session.user.id);
   const firstName = session.user.name?.split(" ")[0] ?? "there";
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  const isAdmin = user?.role === "admin";
 
   return (
     <main className="px-6">
@@ -333,6 +341,60 @@ export default async function UserDashboardPage() {
                 </div>
               </Card>
             </Link>
+
+            {isAdmin && (
+              <>
+                <Link href="/admin/analytics">
+                  <Card className={`${quickActionsCardClass} border-red-500/20 hover:border-red-500`}>
+                    <div className="flex items-center">
+                      <BarChart3
+                        className="text-red-400 bg-red-900/30 rounded-lg p-3"
+                        size={42}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <CardHeader>
+                          <CardTitle className="font-semibold text-red-400">
+                            Admin Analytics
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-xs text-muted-foreground">
+                          View financial trends and best-sellers
+                        </CardContent>
+                      </div>
+                      <ArrowRight
+                        className={`${quickActionArrowClass} text-red-400`}
+                        size={15}
+                      />
+                    </div>
+                  </Card>
+                </Link>
+
+                <Link href="/admin/users">
+                  <Card className={`${quickActionsCardClass} border-red-500/20 hover:border-red-500`}>
+                    <div className="flex items-center">
+                      <Users
+                        className="text-red-400 bg-red-900/30 rounded-lg p-3"
+                        size={42}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <CardHeader>
+                          <CardTitle className="font-semibold text-red-400">
+                            Customer CRM
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-xs text-muted-foreground">
+                          Moderate accounts and track LTV
+                        </CardContent>
+                      </div>
+                      <ArrowRight
+                        className={`${quickActionArrowClass} text-red-400`}
+                        size={15}
+                      />
+                    </div>
+                  </Card>
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
