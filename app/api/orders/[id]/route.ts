@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -28,8 +28,11 @@ import { headers } from "next/headers";
  *       404:
  *         description: Order not found
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await context.params;
   const orderId = resolvedParams.id;
 
   const session = await auth.api.getSession({
