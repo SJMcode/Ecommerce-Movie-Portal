@@ -51,7 +51,7 @@ type Props = {
 
 export function UserDrawer({ user, cartItems, orders, lifetimeSpent, triggerElement }: Props) {
   const [banned, setBanned] = useState(!!user.banned);
-  const [banReason, setBanReason] = useState(user.banReason || "");
+  const [banReason, setBanReason] = useState<string | null>(null);
   const [banExpires, setBanExpires] = useState<Date | null>(user.banExpires);
   
   const [reasonInput, setReasonInput] = useState("");

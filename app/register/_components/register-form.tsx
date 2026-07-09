@@ -17,13 +17,13 @@ import { z } from "zod";
 const formSchema = z
   .object({
     name: z.string().min(2),
-    email: z.email(),
+    email: z.string().email(),
     password: z.string().min(8),
     confirmPassword: z.string().min(8),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
-    error: "Passwords do not match",
+    message: "Passwords do not match",
   });
 
 function RegisterForm() {

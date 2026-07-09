@@ -222,9 +222,14 @@ function EditMovieForm({ movie }: ExistingMovieProps) {
       onSubmit: formSchema,
     },
     onSubmit: async ({ value, formApi }) => {
+      const parsed = formSchema.safeParse(value);
+      if (!parsed.success) {
+        return toast.error("Please correct the form validation errors.");
+      }
+
       const updatedMovie = await editMovie({
         id: movie.id,
-        ...value,
+        ...parsed.data,
       });
 
       if (updatedMovie.ok === false) {

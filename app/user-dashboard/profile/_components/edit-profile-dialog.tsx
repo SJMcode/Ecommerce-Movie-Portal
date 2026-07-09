@@ -30,9 +30,7 @@ const formSchema = z.object({
   image: z
     .string()
     .url("Must be a valid URL")
-    .or(z.literal(""))
-    .nullable()
-    .optional(),
+    .or(z.literal("")),
 });
 
 type EditProfileProps = {

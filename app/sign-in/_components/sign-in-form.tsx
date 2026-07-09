@@ -18,7 +18,7 @@ import { z } from "zod"
 import { Eye, EyeOff } from "lucide-react"
 
 const formSchema = z.object({
-  email: z.email(),
+  email: z.string().email(),
   password: z.string().min(1),
   rememberMe: z.boolean(),
 })
