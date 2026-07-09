@@ -17,7 +17,7 @@ import { createStripeSession } from "../_actions/stripe-checkout-action";
 const formSchema = z.object({
   name: z.string().min(1, "Full name is required").max(50),
   email: z.string().email("Invalid email address"),
-  shippingAddress: z.string().max(100).optional(),
+  shippingAddress: z.string().max(100),
 });
 
 type CartItem = {
