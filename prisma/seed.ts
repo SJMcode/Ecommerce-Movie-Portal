@@ -38,7 +38,7 @@ async function main() {
       releaseDate: 2010,
       stock: 15,
       runtime: 148,
-      imageUrl: "https://image.tmdb.org/t/p/w500/8IB2e4R45Td91S5S6f94t0C0a8N.jpg",
+      imageUrl: "https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
       genres: {
         create: [{ genreId: sciFi.id }, { genreId: action.id }, { genreId: thriller.id }],
       },
@@ -59,7 +59,7 @@ async function main() {
       releaseDate: 1999,
       stock: 8,
       runtime: 136,
-      imageUrl: "https://image.tmdb.org/t/p/w500/gynBNzwyaHKtXqlEKKLioNkjKgN.jpg",
+      imageUrl: "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
       genres: {
         create: [{ genreId: sciFi.id }, { genreId: action.id }],
       },
@@ -80,7 +80,7 @@ async function main() {
       releaseDate: 2014,
       stock: 12,
       runtime: 169,
-      imageUrl: "https://image.tmdb.org/t/p/w500/gEU2QpI6EZiTiTYVfH06Ppyi9Ym.jpg",
+      imageUrl: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
       genres: {
         create: [{ genreId: sciFi.id }, { genreId: adventure.id }],
       },

@@ -17,6 +17,7 @@ import { createStripeSession } from "../_actions/stripe-checkout-action";
 const formSchema = z.object({
   name: z.string().min(1, "Full name is required").max(50),
   email: z.string().email("Invalid email address"),
+  shippingAddress: z.string().max(100).optional(),
 });
 
 type CartItem = {
@@ -31,15 +32,18 @@ type CartItem = {
 type CheckoutFormProps = {
   items: CartItem[];
   cartTotal: number;
+  initialName: string;
+  initialEmail: string;
 };
 
-export function CheckoutForm({ items, cartTotal }: CheckoutFormProps) {
+export function CheckoutForm({ items, cartTotal, initialName, initialEmail }: CheckoutFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
     defaultValues: {
-      name: "",
-      email: "",
+      name: initialName,
+      email: initialEmail,
+      shippingAddress: "",
     },
     validators: {
       onSubmit: formSchema,
@@ -115,6 +119,28 @@ export function CheckoutForm({ items, cartTotal }: CheckoutFormProps) {
                         name={field.name}
                         type="email"
                         placeholder="john@example.com"
+                        value={field.state.value}
+                        onChange={(ev) => field.handleChange(ev.target.value)}
+                        onBlur={field.handleBlur}
+                        aria-invalid={isInvalid}
+                        className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                      />
+                      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    </Field>
+                  );
+                }}
+              </form.Field>
+
+              <form.Field name="shippingAddress">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>Shipping Address (Optional)</FieldLabel>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        placeholder="123 Stockholm Road, Sweden"
                         value={field.state.value}
                         onChange={(ev) => field.handleChange(ev.target.value)}
                         onBlur={field.handleBlur}

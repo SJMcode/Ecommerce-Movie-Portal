@@ -159,7 +159,12 @@ export default async function CheckoutPage() {
             </Link>
           </div>
         ) : (
-          <CheckoutForm items={items} cartTotal={cartTotal} />
+          <CheckoutForm
+            items={items}
+            cartTotal={cartTotal}
+            initialName={session.user.name || ""}
+            initialEmail={session.user.email}
+          />
         )}
       </section>
     </main>
