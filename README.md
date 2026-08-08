@@ -1,3 +1,7 @@
+
+# 🎬 Ecommerce Movie Portal — Digital Movie Licensing & Streaming Platform
+
+
 > A production-grade, high-availability e-commerce platform for browsing, licensing, and streaming digital movies, powered by Next.js 16, Prisma ORM, PostgreSQL, Stripe payments, and Nginx load balancing.
 
 ---
