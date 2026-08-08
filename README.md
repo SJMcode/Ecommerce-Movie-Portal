@@ -4,7 +4,7 @@
 
 ## 🚀 Live Demo
 
-- **Live URL:** [https://lonely-rider.loca.lt](https://ecommerce-movie-portal.vercel.app/movies) *(or access via `https://localhost` when running locally with Docker)*
+- **Live URL:** [https://ecommerce-movie-portal.vercel.app](https://ecommerce-movie-portal.vercel.app/movies) *(or access via `https://localhost` when running locally with Docker)*
 - **Admin Dashboard:** `/admin` *(requires admin credentials)*
 
 ---
